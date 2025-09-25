@@ -1,23 +1,19 @@
-import logo from './logo.svg';
+import React from 'react';
+import GestureController from './components/GestureController';
+import DemoArea from './components/DemoArea';
 import './App.css';
 
 function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+        <h1>Vibe Gesture Controller</h1>
+        <p>Real-time hand landmark detection using TensorFlow.js</p>
       </header>
+      <main className="App-main">
+        <GestureController />
+        <DemoArea />
+      </main>
     </div>
   );
 }

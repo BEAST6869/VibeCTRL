@@ -1,38 +1,445 @@
 .App {
   text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px;
+  color: #333;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.App-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 2.5em;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.App-header p {
+  margin: 0;
+  font-size: 1.1em;
+  color: #666;
+  font-weight: 400;
+}
+
+.App-main {
+  padding: 40px 20px;
+}
+
+/* Enhanced UI Polish Styles */
+
+/* Video Overlay Elements */
+.confidence-meter {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 8px 12px;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  min-width: 120px;
+}
+
+.confidence-label {
+  color: white;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.confidence-bar {
+  width: 100%;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: #10b981;
+  transition: width 0.2s ease, background-color 0.2s ease;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  min-width: 30px;
+}
+
+.confidence-text {
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Gesture Animation */
+.gesture-animation {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 10;
+  animation: gesturePopIn 1s ease;
+}
+
+.gesture-icon {
+  font-size: 4rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.gesture-icon.success {
+  color: #10b981;
+  animation: successPulse 0.6s ease;
+}
+
+.gesture-icon.failure {
+  color: #ef4444;
+  animation: failureShake 0.6s ease;
+}
+
+.gesture-name {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes gesturePopIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes successPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+@keyframes failureShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Calibration Overlay */
+.calibration-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  backdrop-filter: blur(4px);
+}
+
+.calibration-content {
+  text-align: center;
+  color: white;
+  max-width: 300px;
+  padding: 24px;
+}
+
+.calibration-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  animation: pulse 2s infinite;
+}
+
+.calibration-text {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.calibration-progress {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.calibration-fill {
+  height: 100%;
+  background: #10b981;
+  transition: width 0.1s linear;
+}
+
+.calibration-percentage {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* UI Controls Section */
+.ui-controls-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.ui-controls-section h4 {
+  margin: 0 0 20px 0;
+  color: #374151;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.control-group {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.control-label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+  cursor: help;
+}
+
+.control-label:hover {
+  color: #1f2937;
+}
+
+/* Calibration Button */
+.calibration-button {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.calibration-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.calibration-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.calibration-status {
+  display: block;
+  margin-top: 8px;
+  color: #10b981;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Sensitivity Sliders */
+.sensitivity-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #d1d5db;
+  outline: none;
+  -webkit-appearance: none;
+  margin-bottom: 8px;
+}
+
+.sensitivity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.sensitivity-slider::-webkit-slider-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+.sensitivity-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* Voice Toggle */
+.voice-toggle {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.voice-toggle.enabled {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.voice-toggle.disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.voice-toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.voice-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.feature-unavailable {
+  display: block;
+  margin-top: 8px;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Enhanced Dataset Summary */
+.count-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.count-display:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.label-name {
+  font-weight: 500;
+  color: #374151;
+}
+
+.count-number {
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+
+.count-number.sufficient {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.count-number.insufficient {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Tooltips */
+[title] {
+  position: relative;
+  cursor: help;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .controls-grid {
+    grid-template-columns: 1fr;
   }
-  to {
-    transform: rotate(360deg);
+  
+  .confidence-meter {
+    position: static;
+    margin: 8px;
+    width: auto;
+  }
+  
+  .gesture-animation {
+    font-size: 0.9rem;
+  }
+  
+  .gesture-icon {
+    font-size: 3rem;
   }
 }

@@ -1,70 +1,144 @@
-# Getting Started with Create React App
+# Vibe Gestures - Real-Time Hand Gesture Recognition
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A React application for real-time hand gesture recognition using TensorFlow.js, featuring custom model training, gesture mapping to system actions, and import/export capabilities.
+
+## Features
+
+- **Real-time hand detection** using MediaPipe Handpose
+- **Custom gesture training** with data collection and model training
+- **Model persistence** - models automatically save and reload across sessions
+- **Import/Export models** - share trained models between devices
+- **Action mapping** - map gestures to keyboard shortcuts, system commands, etc.
+- **Swipe detection** - built-in left/right swipe gestures
+- **Teachable Machine integration** - import models from Google's Teachable Machine
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- A webcam for gesture detection
+- Modern browser with WebGL support
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <your-repo-url>
+cd vibe-gestures
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm start
+```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Usage
+
+1. **Allow camera access** when prompted
+2. **Collect gesture data** by holding the record buttons while performing gestures
+3. **Train your model** once you have sufficient data (10+ samples per gesture recommended)
+4. **Start inference** to begin real-time gesture recognition
+5. **Configure action mappings** to trigger keyboard shortcuts or system commands
+
+## Model Persistence
+
+Models are automatically saved to IndexedDB after training and persist across browser sessions. You can:
+
+- **Export models**: Download your trained model files to share or backup
+- **Import models**: Load previously exported models or models from other sources
+- **Delete models**: Remove saved models from browser storage
+
+## Using Teachable Machine as Fallback
+
+If you prefer to use Google's Teachable Machine for gesture training, follow these steps:
+
+### Step 1: Create Your Model in Teachable Machine
+
+1. Go to [teachablemachine.withgoogle.com](https://teachablemachine.withgoogle.com)
+2. Choose "Image Project" → "Standard image model"
+3. Create classes for your gestures (e.g., "peace", "thumbs_up", "fist", etc.)
+4. Upload images or use webcam to record gesture examples
+5. Train your model in Teachable Machine
+
+### Step 2: Export TensorFlow.js Model
+
+1. Click "Export Model" in Teachable Machine
+2. Select the "TensorFlow.js" tab
+3. Choose "Download" and save the model files
+4. Extract the downloaded zip file
+
+### Step 3: Integrate with Vibe Gestures
+
+**Option A: Import via UI (Recommended)**
+1. In Vibe Gestures, click "📥 Import Model"
+2. Select the `model.json` file and all `.bin` weight files from your Teachable Machine export
+3. The model will load automatically
+
+**Option B: Manual Integration**
+1. Create a `public/model/` directory in your project
+2. Copy `model.json` and all weight files to `public/model/`
+3. Add this code to load the model:
+
+```javascript
+// Load Teachable Machine model
+const model = await tf.loadGraphModel('/model/model.json');
+```
+
+**Note**: Teachable Machine models use `tf.loadGraphModel()` while custom-trained models use `tf.loadLayersModel()`. The UI import handles this automatically.
+
+### Step 4: Update Gesture Labels
+
+Ensure your Teachable Machine class names match the gesture labels used in the application, or update the `DEFAULT_LABELS` in `src/constants.js`.
 
 ## Available Scripts
 
-In the project directory, you can run:
-
 ### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Runs the app in development mode at [http://localhost:3000](http://localhost:3000)
 
 ### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Launches the test runner in interactive watch mode
 
 ### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Builds the app for production to the `build` folder
 
 ### `npm run eject`
+**Note: This is a one-way operation!** Ejects from Create React App configuration.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Project Structure
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```
+src/
+├── components/
+│   ├── GestureController.jsx    # Main gesture recognition component
+│   └── MappingEditor.jsx        # Gesture-to-action mapping interface
+├── ml/
+│   └── train.js                 # Model training utilities
+├── utils/
+│   ├── features.js              # Hand landmark feature extraction
+│   └── actions.js               # Action execution utilities
+├── constants.js                 # Configuration constants
+└── App.js                       # Root component
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Troubleshooting
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- **Camera not working**: Ensure browser has camera permissions and no other apps are using the camera
+- **Model won't load**: Clear browser data and retrain, or try importing a fresh model
+- **Poor accuracy**: Collect more diverse training data (50-200 samples per gesture recommended)
+- **Actions not triggering**: Check gesture mappings and ensure actions are properly configured
 
-## Learn More
+## Contributing
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## License
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This project is licensed under the MIT License.

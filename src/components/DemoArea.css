@@ -1,0 +1,385 @@
+/* DemoArea.css */
+
+.demo-area {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.demo-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.demo-header h3 {
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.demo-header p {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.demo-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .demo-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Video Section */
+.video-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.video-section h4 {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.video-container {
+  text-align: center;
+}
+
+.demo-video {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.demo-video:hover {
+  transform: scale(1.02);
+}
+
+.video-info {
+  margin-top: 12px;
+}
+
+.video-info p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 8px 0;
+}
+
+.demo-action {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.demo-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.demo-action:active {
+  transform: translateY(0);
+}
+
+/* Slides Section */
+.slides-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.slides-section h4 {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.slide-container {
+  position: relative;
+}
+
+.slide {
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.slide::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.slide-content h2 {
+  margin: 0 0 12px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slide-content p {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  opacity: 0.95;
+  line-height: 1.4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  max-width: 280px;
+}
+
+.slide-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
+.slide-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  gap: 12px;
+}
+
+.slide-nav {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.slide-nav:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.slide-nav:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slide-dots {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dot.active {
+  background: #3b82f6;
+  transform: scale(1.2);
+}
+
+.dot:hover {
+  background: #6b7280;
+}
+
+.slide-hint {
+  color: #6b7280;
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 12px 0 0 0;
+  font-style: italic;
+}
+
+/* Action History */
+.action-history {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.action-history h4 {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.action-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.no-actions {
+  color: #9ca3af;
+  text-align: center;
+  font-style: italic;
+  margin: 20px 0;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  margin: 4px 0;
+  background: #f8fafc;
+  border-radius: 6px;
+  border-left: 3px solid #10b981;
+  animation: slideInRight 0.3s ease;
+}
+
+.action-item:first-child {
+  background: #ecfdf5;
+  border-left-color: #059669;
+}
+
+.action-name {
+  font-weight: 500;
+  color: #374151;
+  flex: 1;
+}
+
+.action-time {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.action-slide {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Instructions */
+.demo-instructions {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.demo-instructions h4 {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.demo-instructions ol {
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+}
+
+.demo-instructions li {
+  margin: 8px 0;
+}
+
+.demo-instructions strong {
+  color: #374151;
+}
+
+.suggested-mappings {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.suggested-mappings h5 {
+  margin: 0 0 12px 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.suggested-mappings ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #4b5563;
+}
+
+.suggested-mappings li {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+
+.suggested-mappings code {
+  background: #e5e7eb;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.suggested-mappings kbd {
+  background: #374151;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
