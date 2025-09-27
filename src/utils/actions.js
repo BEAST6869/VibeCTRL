@@ -7,6 +7,10 @@ export const ACTION_TYPES = {
   SCROLL_DOWN: 'scroll_down',
   SCROLL_UP: 'scroll_up',
   TOGGLE_VIDEO: 'toggle_video',
+  VOLUME_UP: 'volume_up',
+  VOLUME_DOWN: 'volume_down',
+  TAB_NEXT: 'tab_next',
+  TAB_PREV: 'tab_prev',
   KEY_PRESS: 'key_press',
   CLICK_SELECTOR: 'click_selector',
   SWIPE_LEFT: 'swipe_left',
@@ -18,6 +22,10 @@ export const DEFAULT_ACTION_PARAMS = {
   [ACTION_TYPES.SCROLL_DOWN]: { pixels: 300 },
   [ACTION_TYPES.SCROLL_UP]: { pixels: 300 },
   [ACTION_TYPES.TOGGLE_VIDEO]: {},
+  [ACTION_TYPES.VOLUME_UP]: { amount: 0.1 },
+  [ACTION_TYPES.VOLUME_DOWN]: { amount: 0.1 },
+  [ACTION_TYPES.TAB_NEXT]: {},
+  [ACTION_TYPES.TAB_PREV]: {},
   [ACTION_TYPES.KEY_PRESS]: { key: 'ArrowRight' },
   [ACTION_TYPES.CLICK_SELECTOR]: { selector: 'button' },
   [ACTION_TYPES.SWIPE_LEFT]: { key: 'ArrowLeft' },
@@ -29,6 +37,10 @@ export const ACTION_DESCRIPTIONS = {
   [ACTION_TYPES.SCROLL_DOWN]: 'Scroll page down',
   [ACTION_TYPES.SCROLL_UP]: 'Scroll page up',
   [ACTION_TYPES.TOGGLE_VIDEO]: 'Toggle video play/pause',
+  [ACTION_TYPES.VOLUME_UP]: 'Increase volume',
+  [ACTION_TYPES.VOLUME_DOWN]: 'Decrease volume',
+  [ACTION_TYPES.TAB_NEXT]: 'Switch to next tab',
+  [ACTION_TYPES.TAB_PREV]: 'Switch to previous tab',
   [ACTION_TYPES.KEY_PRESS]: 'Send keyboard key',
   [ACTION_TYPES.CLICK_SELECTOR]: 'Click element by selector',
   [ACTION_TYPES.SWIPE_LEFT]: 'Swipe left (motion-based)',
@@ -112,29 +124,114 @@ const executeScroll = (direction, pixels) => {
 const executeVideoToggle = () => {
   try {
     const videos = document.querySelectorAll('video');
+    const audios = document.querySelectorAll('audio');
+    const mediaElements = [...videos, ...audios];
     
-    if (videos.length === 0) {
-      console.warn('⚠️ No video elements found on page');
-      showToast('No video element found on page', 'error');
+    if (mediaElements.length === 0) {
+      console.warn('⚠️ No media elements found on page');
+      showToast('No media element found on page', 'error');
       return false;
     }
     
-    const video = videos[0]; // Use first video element
+    // Toggle all media elements
+    let anyPlaying = false;
+    mediaElements.forEach(media => {
+      if (!media.paused) {
+        anyPlaying = true;
+      }
+    });
     
-    if (video.paused) {
-      video.play();
-      console.log('▶️ Video played');
-      showToast('Video playing', 'success');
-    } else {
-      video.pause();
-      console.log('⏸️ Video paused');
-      showToast('Video paused', 'success');
-    }
+    mediaElements.forEach(media => {
+      if (anyPlaying) {
+        media.pause();
+      } else {
+        media.play().catch(err => {
+          console.warn('⚠️ Failed to play media:', err);
+        });
+      }
+    });
+    
+    const action = anyPlaying ? 'paused' : 'playing';
+    console.log(`🎬 All media ${action}`);
+    showToast(`Media ${action}`, 'success');
     
     return true;
   } catch (error) {
     console.error('❌ Video toggle failed:', error);
-    showToast('Failed to toggle video', 'error');
+    showToast('Failed to toggle media', 'error');
+    return false;
+  }
+};
+
+/**
+ * Execute volume control action
+ * @param {string} direction - 'up' or 'down'
+ * @param {number} amount - Volume change amount (0-1)
+ */
+const executeVolumeControl = (direction, amount) => {
+  try {
+    const videos = document.querySelectorAll('video');
+    const audios = document.querySelectorAll('audio');
+    const mediaElements = [...videos, ...audios];
+    
+    if (mediaElements.length === 0) {
+      console.warn('⚠️ No media elements found on page');
+      showToast('No media element found on page', 'error');
+      return false;
+    }
+    
+    const change = direction === 'up' ? amount : -amount;
+    let newVolume = 0;
+    
+    mediaElements.forEach(media => {
+      const currentVolume = media.volume;
+      newVolume = Math.max(0, Math.min(1, currentVolume + change));
+      media.volume = newVolume;
+    });
+    
+    const volumePercent = Math.round(newVolume * 100);
+    console.log(`🔊 Volume ${direction}: ${volumePercent}%`);
+    showToast(`Volume: ${volumePercent}%`, 'success');
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Volume control failed:', error);
+    showToast('Failed to control volume', 'error');
+    return false;
+  }
+};
+
+/**
+ * Execute tab switching action
+ * @param {string} direction - 'next' or 'prev'
+ */
+const executeTabSwitch = (direction) => {
+  try {
+    // Note: Due to browser security restrictions, we cannot directly control browser tabs
+    // Instead, we'll use keyboard shortcuts that browsers recognize
+    const key = direction === 'next' ? 'Tab' : 'Tab';
+    const modifiers = direction === 'next' ? ['ctrlKey'] : ['ctrlKey', 'shiftKey'];
+    
+    // Create and dispatch keyboard event
+    const event = new KeyboardEvent('keydown', {
+      key: key,
+      code: key,
+      ctrlKey: modifiers.includes('ctrlKey'),
+      shiftKey: modifiers.includes('shiftKey'),
+      bubbles: true,
+      cancelable: true
+    });
+    
+    // Dispatch to document
+    document.dispatchEvent(event);
+    
+    console.log(`🔄 Tab switch: ${direction}`);
+    showToast(`Switching to ${direction} tab`, 'success');
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Tab switch failed:', error);
+    showToast('Failed to switch tabs', 'error');
     return false;
   }
 };
@@ -235,6 +332,18 @@ export const executeMappedAction = (mapping) => {
       case ACTION_TYPES.TOGGLE_VIDEO:
         return executeVideoToggle();
         
+      case ACTION_TYPES.VOLUME_UP:
+        return executeVolumeControl('up', params.amount || DEFAULT_ACTION_PARAMS[ACTION_TYPES.VOLUME_UP].amount);
+        
+      case ACTION_TYPES.VOLUME_DOWN:
+        return executeVolumeControl('down', params.amount || DEFAULT_ACTION_PARAMS[ACTION_TYPES.VOLUME_DOWN].amount);
+        
+      case ACTION_TYPES.TAB_NEXT:
+        return executeTabSwitch('next');
+        
+      case ACTION_TYPES.TAB_PREV:
+        return executeTabSwitch('prev');
+        
       case ACTION_TYPES.KEY_PRESS:
         return executeKeyPress(params.key || DEFAULT_ACTION_PARAMS[ACTION_TYPES.KEY_PRESS].key);
         
@@ -274,6 +383,7 @@ export const getDefaultMapping = (labels) => {
   // Provide sensible defaults for common labels
   labels.forEach((label, index) => {
     switch (label.toLowerCase()) {
+      case 'open_hand':
       case 'open':
       case 'palm':
         defaultMapping[label] = { action: ACTION_TYPES.SCROLL_DOWN, params: { pixels: 300 } };
@@ -282,10 +392,18 @@ export const getDefaultMapping = (labels) => {
       case 'closed':
         defaultMapping[label] = { action: ACTION_TYPES.TOGGLE_VIDEO, params: {} };
         break;
-      case 'thumbs':
       case 'thumbs_up':
+      case 'thumbs':
       case 'like':
-        defaultMapping[label] = { action: ACTION_TYPES.KEY_PRESS, params: { key: 'ArrowRight' } };
+        defaultMapping[label] = { action: ACTION_TYPES.VOLUME_UP, params: { amount: 0.1 } };
+        break;
+      case 'thumbs_down':
+      case 'dislike':
+        defaultMapping[label] = { action: ACTION_TYPES.VOLUME_DOWN, params: { amount: 0.1 } };
+        break;
+      case 'peace':
+      case 'victory':
+        defaultMapping[label] = { action: ACTION_TYPES.TAB_NEXT, params: {} };
         break;
       case 'point':
       case 'finger':

@@ -126,6 +126,23 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
           </div>
         );
         
+      case ACTION_TYPES.VOLUME_UP:
+      case ACTION_TYPES.VOLUME_DOWN:
+        return (
+          <div className="param-input">
+            <label>Volume Change:</label>
+            <input
+              type="number"
+              min="0.01"
+              max="0.5"
+              step="0.01"
+              value={params.amount || DEFAULT_ACTION_PARAMS[action].amount}
+              onChange={(e) => handleParamChange(label, 'amount', parseFloat(e.target.value) || 0.1)}
+              placeholder="0.1"
+            />
+          </div>
+        );
+        
       case ACTION_TYPES.KEY_PRESS:
         return (
           <div className="param-input">
@@ -182,6 +199,8 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
         );
         
       case ACTION_TYPES.TOGGLE_VIDEO:
+      case ACTION_TYPES.TAB_NEXT:
+      case ACTION_TYPES.TAB_PREV:
       case ACTION_TYPES.NOOP:
       default:
         return null;
@@ -278,7 +297,9 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
             <h4>Action Types:</h4>
             <ul>
               <li><strong>Scroll page down/up:</strong> Smooth scroll by specified pixels</li>
-              <li><strong>Toggle video:</strong> Play/pause first video element on page</li>
+              <li><strong>Toggle video:</strong> Play/pause all media elements on page</li>
+              <li><strong>Increase/Decrease volume:</strong> Control volume of all media elements</li>
+              <li><strong>Switch to next/previous tab:</strong> Navigate browser tabs</li>
               <li><strong>Send keyboard key:</strong> Dispatch keyboard event</li>
               <li><strong>Click element:</strong> Find and click element by CSS selector</li>
               <li><strong>No action:</strong> Do nothing when gesture is recognized</li>

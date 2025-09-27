@@ -103,6 +103,57 @@
   transform: translateY(0);
 }
 
+.demo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: center;
+}
+
+.demo-controls .demo-action {
+  margin: 0;
+  font-size: 0.8rem;
+  padding: 8px 12px;
+}
+
+/* Audio Section */
+.audio-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+}
+
+.audio-section h4 {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.audio-container {
+  text-align: center;
+}
+
+.demo-audio {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.audio-info {
+  margin-top: 12px;
+}
+
+.audio-info p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 8px 0;
+}
+
 /* Slides Section */
 .slides-section {
   background: white;

@@ -57,7 +57,7 @@ const DemoArea = () => {
     }
   };
 
-  // Video control functions
+  // Media control functions
   const toggleVideo = () => {
     if (videoRef.current) {
       if (videoRef.current.paused) {
@@ -76,6 +76,20 @@ const DemoArea = () => {
       videoRef.current.volume = newVolume;
       logAction(`Volume ${change > 0 ? 'Up' : 'Down'}: ${Math.round(newVolume * 100)}%`);
     }
+  };
+
+  // Enhanced media controls for testing
+  const testMediaControls = () => {
+    const videos = document.querySelectorAll('video');
+    const audios = document.querySelectorAll('audio');
+    const mediaElements = [...videos, ...audios];
+    
+    if (mediaElements.length === 0) {
+      logAction('No media elements found');
+      return;
+    }
+    
+    logAction(`Found ${mediaElements.length} media element(s)`);
   };
 
   // Demo action logger
@@ -99,6 +113,7 @@ const DemoArea = () => {
       toggleVideo,
       volumeUp: () => adjustVolume(0.1),
       volumeDown: () => adjustVolume(-0.1),
+      testMediaControls,
       logAction
     };
 
@@ -135,13 +150,56 @@ const DemoArea = () => {
             </video>
             <div className="video-info">
               <p>🎯 Map gestures to: Play/Pause, Volume Up/Down</p>
-              <button 
-                className="demo-action"
-                onClick={toggleVideo}
-                title="Test video control mapping"
-              >
-                🎬 Toggle Video (Demo Action)
-              </button>
+              <div className="demo-controls">
+                <button 
+                  className="demo-action"
+                  onClick={toggleVideo}
+                  title="Test video control mapping"
+                >
+                  🎬 Toggle Video
+                </button>
+                <button 
+                  className="demo-action"
+                  onClick={() => adjustVolume(0.1)}
+                  title="Test volume up"
+                >
+                  🔊 Volume Up
+                </button>
+                <button 
+                  className="demo-action"
+                  onClick={() => adjustVolume(-0.1)}
+                  title="Test volume down"
+                >
+                  🔉 Volume Down
+                </button>
+                <button 
+                  className="demo-action"
+                  onClick={testMediaControls}
+                  title="Test media detection"
+                >
+                  🔍 Test Media
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Audio Player Section */}
+        <div className="audio-section">
+          <h4>🎵 Audio Player</h4>
+          <div className="audio-container">
+            <audio
+              ref={videoRef}
+              className="demo-audio"
+              controls
+              loop
+            >
+              <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav" />
+              <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg" />
+              Your browser does not support the audio element.
+            </audio>
+            <div className="audio-info">
+              <p>🎯 Test volume controls with audio element</p>
             </div>
           </div>
         </div>
@@ -228,10 +286,12 @@ const DemoArea = () => {
         <div className="suggested-mappings">
           <h5>💡 Suggested Mappings:</h5>
           <ul>
-            <li><code>thumbs_up</code> → <kbd>Space</kbd> (Play/Pause video)</li>
-            <li><code>peace</code> → <kbd>ArrowRight</kbd> (Next slide)</li>
-            <li><code>fist</code> → <kbd>ArrowLeft</kbd> (Previous slide)</li>
-            <li><code>open_palm</code> → <kbd>ArrowUp</kbd> (Volume up)</li>
+            <li><code>open_hand</code> → Scroll down (Page navigation)</li>
+            <li><code>fist</code> → Toggle video (Play/Pause media)</li>
+            <li><code>thumbs_up</code> → Volume up (Increase volume)</li>
+            <li><code>thumbs_down</code> → Volume down (Decrease volume)</li>
+            <li><code>peace</code> → Next tab (Browser navigation)</li>
+            <li><code>point</code> → Click button (Element interaction)</li>
           </ul>
         </div>
       </div>

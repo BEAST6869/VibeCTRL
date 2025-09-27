@@ -3,7 +3,14 @@
  */
 
 // Default gesture labels for data collection
-export const DEFAULT_LABELS = ["open", "fist", "thumbs"];
+export const DEFAULT_LABELS = [
+  "open_hand",    // Open palm for scrolling
+  "fist",         // Closed fist for play/pause
+  "thumbs_up",    // Thumbs up for volume up
+  "thumbs_down",  // Thumbs down for volume down
+  "peace",        // Peace sign for additional actions
+  "point"         // Pointing gesture for clicking
+];
 
 // Data capture constants
 export const CAPTURE_DEBOUNCE_MS = 16; // Approximately 60fps
