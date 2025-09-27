@@ -37,6 +37,9 @@ const GestureController = () => {
   const lastInferenceTimeRef = useRef(0);
   const centroidHistoryRef = useRef([]);
   const lastSwipeTimeRef = useRef(0);
+  // Anti-spam and cooldown tracking
+  const lastTriggeredRef = useRef({}); // per-gesture last trigger timestamp
+  const recentActionsRef = useRef([]); // array of { label, timestamp }
   
   // File input ref for importing TF.js models (model.json + weights)
   const importInputRef = useRef(null);
@@ -439,85 +442,104 @@ const GestureController = () => {
   };
 
   const triggerSwipeAction = (swipeDirection) => {
+    const currentTime = Date.now();
+    // Per-gesture cooldown check for swipes as well
+    const lastForGesture = lastTriggeredRef.current[swipeDirection] || 0;
+    if (currentTime - lastForGesture < cooldownMs) {
+      console.log(`⏱️ Swipe cooldown active for ${swipeDirection}, skipping.`);
+      return false;
+    }
+    lastTriggeredRef.current[swipeDirection] = currentTime;
+    recentActionsRef.current.push({ label: swipeDirection, timestamp: currentTime });
+    if (recentActionsRef.current.length > 30) recentActionsRef.current.shift();
+
     console.log(`🎯 SWIPE ACTION TRIGGERED: ${swipeDirection}`);
     
-    // Create a synthetic action for the mapping system
-    const mapping = gestureMappings[swipeDirection];
-    if (mapping) {
-      console.log(`🎨 Executing mapped swipe action:`, mapping);
-      const success = executeMappedAction(mapping);
-      if (success) {
-        console.log(`✅ Swipe action executed successfully`);
-      } else {
-        console.log(`❌ Swipe action execution failed`);
-      }
-      return success;
-    } else {
-      // Default swipe actions if no mapping exists
-      const defaultMapping = {
-        action: swipeDirection === 'swipe_left' ? 'key_press' : 'key_press',
-        params: {
-          key: swipeDirection === 'swipe_left' ? 'ArrowLeft' : 'ArrowRight'
+    // Execute asynchronously to avoid blocking UI/inference loop
+    setTimeout(() => {
+      const mapping = gestureMappings[swipeDirection];
+      if (mapping) {
+        console.log(`🎨 Executing mapped swipe action:`, mapping);
+        const success = executeMappedAction(mapping);
+        if (success) {
+          console.log(`✅ Swipe action executed successfully`);
+        } else {
+          console.log(`❌ Swipe action execution failed`);
         }
-      };
-      console.log(`🎨 Using default swipe action:`, defaultMapping);
-      return executeMappedAction(defaultMapping);
-    }
+      } else {
+        // Default swipe actions if no mapping exists
+        const defaultMapping = {
+          action: swipeDirection === 'swipe_left' ? 'key_press' : 'key_press',
+          params: {
+            key: swipeDirection === 'swipe_left' ? 'ArrowLeft' : 'ArrowRight'
+          }
+        };
+        console.log(`🎨 Using default swipe action:`, defaultMapping);
+        executeMappedAction(defaultMapping);
+      }
+    }, 0);
+
+    return true;
   };
 
   const triggerAction = (actionLabel, confidence) => {
     const currentTime = Date.now();
-    
-    // Check cooldown (now using dynamic cooldown)
-    if (currentTime - lastActionTimeRef.current < cooldownMs) {
-      console.log(`⏱️ Action cooldown active, skipping ${actionLabel}`);
+
+    // Per-gesture cooldown
+    const lastForGesture = lastTriggeredRef.current[actionLabel] || 0;
+    if (currentTime - lastForGesture < cooldownMs) {
+      console.log(`⏱️ Cooldown active for ${actionLabel}, skipping.`);
       return false;
     }
-    
+    lastTriggeredRef.current[actionLabel] = currentTime;
+    recentActionsRef.current.push({ label: actionLabel, timestamp: currentTime });
+    if (recentActionsRef.current.length > 30) recentActionsRef.current.shift();
+
     console.log(`🎯 ACTION TRIGGERED: ${actionLabel} (${(confidence * 100).toFixed(1)}% confidence)`);
     setLastTriggeredAction({ label: actionLabel, confidence, timestamp: currentTime });
-    lastActionTimeRef.current = currentTime;
-    
-    // Show gesture animation
+
+    // Show initial gesture animation immediately (optimistic)
     showGestureAnimation(true, actionLabel);
-    
+
     // Clear action indicator after 2 seconds
     setTimeout(() => {
       setLastTriggeredAction(null);
     }, 2000);
-    
-    // Execute mapped action
-    const mapping = gestureMappings[actionLabel];
-    if (mapping) {
-      console.log(`🎨 Executing mapped action for ${actionLabel}:`, mapping);
-      const success = executeMappedAction(mapping);
-      
-      // Voice feedback
-      let actionDescription = actionLabel;
-      if (mapping.action === 'key_press' && mapping.params?.key) {
-        actionDescription = `${actionLabel} - ${mapping.params.key}`;
-      }
-      speakAction(actionDescription);
-      
-      // Update animation based on success
-      showGestureAnimation(success, actionLabel);
-      
-      // Log to demo area if available
-      if (window.demoAreaActions?.logAction) {
-        window.demoAreaActions.logAction(`${actionLabel} (${(confidence * 100).toFixed(1)}%)`);
-      }
-      
-      if (success) {
-        console.log(`✅ Action executed successfully`);
+
+    // Execute mapped action asynchronously to avoid blocking UI/inference loop
+    setTimeout(() => {
+      const mapping = gestureMappings[actionLabel];
+      if (mapping) {
+        console.log(`🎨 Executing mapped action for ${actionLabel}:`, mapping);
+        const success = executeMappedAction(mapping);
+
+        // Voice feedback
+        let actionDescription = actionLabel;
+        if (mapping.action === 'key_press' && mapping.params?.key) {
+          actionDescription = `${actionLabel} - ${mapping.params.key}`;
+        }
+        speakAction(actionDescription);
+
+        // Update animation based on success
+        showGestureAnimation(success, actionLabel);
+
+        // Log to demo area if available
+        if (window.demoAreaActions?.logAction) {
+          window.demoAreaActions.logAction(`${actionLabel} (${(confidence * 100).toFixed(1)}%)`);
+        }
+
+        if (success) {
+          console.log(`✅ Action executed successfully`);
+        } else {
+          console.log(`❌ Action execution failed`);
+        }
       } else {
-        console.log(`❌ Action execution failed`);
+        console.log(`⚠️ No mapping found for gesture: ${actionLabel}`);
+        showGestureAnimation(false, actionLabel);
       }
-      return success;
-    } else {
-      console.log(`⚠️ No mapping found for gesture: ${actionLabel}`);
-      showGestureAnimation(false, actionLabel);
-      return false;
-    }
+    }, 0);
+
+    return true; // scheduled
   };
 
   // Handle mapping changes from MappingEditor

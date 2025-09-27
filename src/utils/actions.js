@@ -19,8 +19,8 @@ export const ACTION_TYPES = {
 };
 
 export const DEFAULT_ACTION_PARAMS = {
-  [ACTION_TYPES.SCROLL_DOWN]: { pixels: 300 },
-  [ACTION_TYPES.SCROLL_UP]: { pixels: 300 },
+  [ACTION_TYPES.SCROLL_DOWN]: { pixels: 300, distance: 300 },
+  [ACTION_TYPES.SCROLL_UP]: { pixels: 300, distance: 300 },
   [ACTION_TYPES.TOGGLE_VIDEO]: {},
   [ACTION_TYPES.VOLUME_UP]: { amount: 0.1 },
   [ACTION_TYPES.VOLUME_DOWN]: { amount: 0.1 },
@@ -54,62 +54,153 @@ export const ACTION_DESCRIPTIONS = {
  * @param {string} type - Toast type ('success', 'error', 'info')
  */
 const showToast = (message, type = 'info') => {
-  // Create toast element
-  const toast = document.createElement('div');
-  toast.className = `gesture-toast toast-${type}`;
-  toast.textContent = message;
+  try {
+    const toast = document.createElement('div');
+    toast.className = `gesture-toast toast-${type}`;
+    toast.textContent = message;
   
-  // Style the toast
-  Object.assign(toast.style, {
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    padding: '12px 20px',
-    borderRadius: '6px',
-    color: 'white',
-    fontWeight: '500',
-    fontSize: '14px',
-    zIndex: '10000',
-    maxWidth: '300px',
-    opacity: '0',
-    transform: 'translateX(100%)',
-    transition: 'all 0.3s ease',
-    backgroundColor: type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#17a2b8'
-  });
+    Object.assign(toast.style, {
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      padding: '12px 20px',
+      borderRadius: '6px',
+      color: 'white',
+      fontWeight: '500',
+      fontSize: '14px',
+      zIndex: '10000',
+      maxWidth: '300px',
+      opacity: '0',
+      transform: 'translateX(100%)',
+      transition: 'all 0.3s ease',
+      backgroundColor: type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#17a2b8'
+    });
   
-  document.body.appendChild(toast);
+    document.body.appendChild(toast);
   
-  // Animate in
-  setTimeout(() => {
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateX(0)';
-  }, 10);
-  
-  // Animate out and remove
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100%)';
+    // Animate in
     setTimeout(() => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast);
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(0)';
+    }, 10);
+  
+    // Animate out and remove
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }, 3000);
+  } catch (err) {
+    // In very restrictive environments, DOM APIs might fail; just log
+    console.warn('Toast display failed:', err);
+  }
+};
+
+/** Utility: coalesce numeric params (first valid number wins) */
+const coalesceNumber = (...values) => {
+  for (const v of values) {
+    if (typeof v === 'number' && !Number.isNaN(v)) return v;
+  }
+  return undefined;
+};
+
+/** Utility: get the deepest hovered element (if supported) */
+const getHoveredElement = () => {
+  try {
+    const hovered = document.querySelectorAll(':hover');
+    if (hovered && hovered.length) return hovered[hovered.length - 1];
+  } catch (_) {
+    // :hover may not be queryable in some contexts
+  }
+  return null;
+};
+
+/** Utility: determine if an element can scroll vertically */
+const isScrollable = (el) => {
+  if (!el || el === document || el === window) return false;
+  const style = window.getComputedStyle(el);
+  const overflowY = style.overflowY;
+  const canScroll = (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay');
+  return canScroll && el.scrollHeight > el.clientHeight;
+};
+
+/** Utility: find nearest scrollable ancestor for an element */
+const findScrollableAncestor = (el) => {
+  let node = el;
+  while (node && node !== document.body && node !== document.documentElement) {
+    if (isScrollable(node)) return node;
+    node = node.parentElement;
+  }
+  // fall back to document scrolling element
+  return document.scrollingElement || document.documentElement || document.body;
+};
+
+/** Scroll a target element by deltaY in a single step */
+const scrollElementBy = (target, deltaY) => {
+  if (!target) return;
+  if (target === document.body || target === document.documentElement || target === document.scrollingElement) {
+    window.scrollBy(0, deltaY);
+  } else if (typeof target.scrollBy === 'function') {
+    target.scrollBy(0, deltaY);
+  } else {
+    target.scrollTop += deltaY;
+  }
+};
+
+/** Animate scroll in small non-blocking steps via requestAnimationFrame */
+const animateScroll = (target, totalDelta, durationMs = 200) => {
+  return new Promise((resolve) => {
+    const start = performance.now();
+    const initialScrollTop = target && target.scrollTop;
+    const step = (t) => {
+      const elapsed = t - start;
+      const progress = Math.min(1, durationMs > 0 ? elapsed / durationMs : 1);
+      // ease-out cubic for smoothness
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const currentDelta = totalDelta * easeOut;
+      const alreadyScrolled = (initialScrollTop != null) ? (target.scrollTop - initialScrollTop) : 0;
+      const toScrollNow = currentDelta - alreadyScrolled;
+      scrollElementBy(target, toScrollNow);
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        resolve(true);
       }
-    }, 300);
-  }, 3000);
+    };
+    window.requestAnimationFrame(step);
+  });
 };
 
 /**
- * Execute scroll action
+ * Execute scroll action (non-blocking, container-aware)
  * @param {string} direction - 'up' or 'down'
  * @param {number} pixels - Number of pixels to scroll
  */
 const executeScroll = (direction, pixels) => {
   try {
-    const scrollAmount = direction === 'up' ? -pixels : pixels;
-    window.scrollBy({
-      top: scrollAmount,
-      behavior: 'smooth'
-    });
-    console.log(`📜 Scrolled ${direction} by ${pixels}px`);
+    const delta = direction === 'up' ? -Math.abs(pixels) : Math.abs(pixels);
+
+    // Pick best target: hovered element's scrollable ancestor, then activeElement, fallback to page
+    const hovered = getHoveredElement();
+    const active = document.activeElement;
+    const firstCandidate = hovered || active;
+    const target = findScrollableAncestor(firstCandidate);
+
+    // Run animation asynchronously without blocking UI thread
+    setTimeout(() => {
+      animateScroll(target, delta).then(() => {
+        console.log(`📜 Scrolled ${direction} by ${Math.abs(pixels)}px on`, target === document.scrollingElement ? 'page' : target);
+      }).catch(err => {
+        console.warn('⚠️ Scroll animation error, falling back:', err);
+        // Fallback single-step scroll
+        scrollElementBy(target, delta);
+      });
+    }, 0);
+
     return true;
   } catch (error) {
     console.error('❌ Scroll action failed:', error);
@@ -323,12 +414,16 @@ export const executeMappedAction = (mapping) => {
   
   try {
     switch (action) {
-      case ACTION_TYPES.SCROLL_DOWN:
-        return executeScroll('down', params.pixels || DEFAULT_ACTION_PARAMS[ACTION_TYPES.SCROLL_DOWN].pixels);
-        
-      case ACTION_TYPES.SCROLL_UP:
-        return executeScroll('up', params.pixels || DEFAULT_ACTION_PARAMS[ACTION_TYPES.SCROLL_UP].pixels);
-        
+      case ACTION_TYPES.SCROLL_DOWN: {
+        const defaultDist = DEFAULT_ACTION_PARAMS[ACTION_TYPES.SCROLL_DOWN].distance || DEFAULT_ACTION_PARAMS[ACTION_TYPES.SCROLL_DOWN].pixels || 100;
+        const dist = coalesceNumber(params.distance, params.pixels, defaultDist) ?? 100;
+        return executeScroll('down', dist);
+      }
+      case ACTION_TYPES.SCROLL_UP: {
+        const defaultDist = DEFAULT_ACTION_PARAMS[ACTION_TYPES.SCROLL_UP].distance || DEFAULT_ACTION_PARAMS[ACTION_TYPES.SCROLL_UP].pixels || 100;
+        const dist = coalesceNumber(params.distance, params.pixels, defaultDist) ?? 100;
+        return executeScroll('up', dist);
+      }
       case ACTION_TYPES.TOGGLE_VIDEO:
         return executeVideoToggle();
         
@@ -476,34 +571,35 @@ export const validateMappings = (mappings) => {
   
   Object.entries(mappings).forEach(([label, mapping]) => {
     if (!mapping || typeof mapping !== 'object') {
-      validation.errors.push(`Invalid mapping for label "${label}"`);
+      validation.errors.push(`Invalid mapping for label \"${label}\"`);
       validation.isValid = false;
       return;
     }
     
-    const { action, params } = mapping;
+    const { action, params = {} } = mapping;
     
     if (!action || !Object.values(ACTION_TYPES).includes(action)) {
-      validation.errors.push(`Invalid action type for label "${label}": ${action}`);
+      validation.errors.push(`Invalid action type for label \"${label}\": ${action}`);
       validation.isValid = false;
     }
     
     // Validate action-specific parameters
     if (action === ACTION_TYPES.SCROLL_DOWN || action === ACTION_TYPES.SCROLL_UP) {
-      if (params.pixels && (typeof params.pixels !== 'number' || params.pixels <= 0)) {
-        validation.warnings.push(`Invalid pixels value for "${label}": ${params.pixels}`);
+      const dist = coalesceNumber(params.distance, params.pixels);
+      if (dist !== undefined && (typeof dist !== 'number' || dist <= 0)) {
+        validation.warnings.push(`Invalid scroll distance for \"${label}\": ${dist}`);
       }
     }
     
     if (action === ACTION_TYPES.CLICK_SELECTOR) {
       if (!params.selector || typeof params.selector !== 'string') {
-        validation.warnings.push(`Missing or invalid selector for "${label}"`);
+        validation.warnings.push(`Missing or invalid selector for \"${label}\"`);
       }
     }
     
     if (action === ACTION_TYPES.KEY_PRESS) {
       if (!params.key || typeof params.key !== 'string') {
-        validation.warnings.push(`Missing or invalid key for "${label}"`);
+        validation.warnings.push(`Missing or invalid key for \"${label}\"`);
       }
     }
   });
