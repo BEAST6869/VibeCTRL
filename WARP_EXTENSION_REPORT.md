@@ -72,8 +72,6 @@ Usage guide (step-by-step for users)
 7) Tune behavior
    - Adjust cooldown, scroll distance, and volume increments in the mapping parameters
 
-8) Practice in the Cookbook
-   - Use the Cookbook page in the popup to practice open-hand scroll and swipe gestures
 
 Notes & limitations (MVP)
 - Detection runs inside the popup; content scripts focus on executing actions within the active site. This keeps site performance impact low and avoids CSP friction.

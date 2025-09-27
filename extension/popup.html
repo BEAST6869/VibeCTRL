@@ -4,15 +4,26 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>VibeCTRL</title>
-    <link rel="stylesheet" href="./popup.css" />
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <!-- We will repurpose the CRA build index.html into this file via prepare-extension.js. -->
-    <!-- Fallback root for a minimal message in case assets didn't copy yet. -->
-    <div id="root" style="padding: 12px; font-family: system-ui;">
-      <h1 style="margin: 0 0 8px;">VibeCTRL</h1>
-      <p>Build not prepared. Run: npm run build:ext</p>
+    <div class="popup">
+      <div class="header">
+        <div class="logo">V</div>
+        <div class="title">VibeCTRL</div>
+      </div>
+      <div class="section">
+        <div id="host" class="host">—</div>
+        <button id="toggle" class="btn primary">Enable on this site</button>
+        <div id="status" class="status off">Overlay: OFF</div>
+      </div>
+      <div class="section row">
+        <button id="openDashboard" class="btn">Open Dashboard</button>
+        <button id="openSettings" class="btn">Settings</button>
+        <button id="help" class="btn">Help</button>
+      </div>
+      <div class="note">Video runs locally. No data leaves your device.</div>
     </div>
-    <!-- The prepared file will include the built JS/CSS bundles. -->
+    <script src="popup.js"></script>
   </body>
 </html>

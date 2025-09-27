@@ -1,3 +1,4 @@
+/* global chrome */
 /**
  * Browser action execution utilities for gesture mapping
  */
@@ -630,9 +631,17 @@ export const saveMappings = (mappings, userId = getOrCreateUserId()) => {
         });
       }
     } catch {}
+    // Mirror a generic current mapping key for content scripts
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        chrome.storage.local.set({ gesture_mappings: mappings }, () => {});
+      }
+    } catch {}
     // Notify listeners in the same document (SPA) that mappings updated
     try {
       window.dispatchEvent(new CustomEvent('vibe:mappings-updated', { detail: { userId } }));
+      // Broadcast to extension tabs as well
+      try { chrome?.runtime?.sendMessage?.({ type: 'vibe:mappings-updated' }); } catch {}
     } catch {}
     return true;
   } catch (error) {

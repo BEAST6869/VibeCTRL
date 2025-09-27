@@ -34,13 +34,22 @@ function prepare() {
   // Read build index.html and adjust asset paths to relative
   const indexHtml = fs.readFileSync(path.join(BUILD_DIR, 'index.html'), 'utf-8');
   // CRA index already contains relative paths to ./static in many setups; ensure no leading slashes
-  const patched = indexHtml
+  let patched = indexHtml
     .replace(/href=\"\/(static\/[^"]+)\"/g, 'href="$1"')
     .replace(/src=\"\/(static\/[^"]+)\"/g, 'src="$1"')
     .replace(/<title>[^<]*<\/title>/, '<title>VibeCTRL</title>');
 
-  fs.writeFileSync(path.join(EXT_DIR, 'popup.html'), patched, 'utf-8');
-  console.log('✔ Extension popup prepared from CRA build');
+  // Ensure a comfortable popup size (Chrome caps ~800x600)
+  const sizeCSS = '<style>html,body,#root{min-width:800px;min-height:600px;box-sizing:border-box;}</style>';
+  if (patched.includes('</head>')) {
+    patched = patched.replace('</head>', `${sizeCSS}\n</head>`);
+  } else {
+    patched = sizeCSS + patched;
+  }
+
+  // Keep developer-authored popup.html intact (minimal popup), only write offscreen app shell
+  fs.writeFileSync(path.join(EXT_DIR, 'offscreen.html'), patched, 'utf-8');
+  console.log('✔ Extension offscreen prepared with enforced min size 800x600');
 }
 
 prepare();

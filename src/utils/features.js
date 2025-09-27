@@ -11,19 +11,19 @@
 export function flattenLandmarks(landmarks) {
   // Validate input
   if (!landmarks || !Array.isArray(landmarks)) {
-    console.error('flattenLandmarks: landmarks must be an array');
+    console.warn('flattenLandmarks: landmarks must be an array');
     return null;
   }
   
   if (landmarks.length !== 21) {
-    console.error(`flattenLandmarks: Expected 21 landmarks, got ${landmarks.length}`);
+    console.warn(`flattenLandmarks: Expected 21 landmarks, got ${landmarks.length}`);
     return null;
   }
   
   // Validate each landmark has at least x, y coordinates
   for (let i = 0; i < landmarks.length; i++) {
     if (!Array.isArray(landmarks[i]) || landmarks[i].length < 2) {
-      console.error(`flattenLandmarks: Invalid landmark at index ${i}, expected [x, y, z] format`);
+      console.warn(`flattenLandmarks: Invalid landmark at index ${i}, expected [x, y, z] format`);
       return null;
     }
   }
@@ -71,7 +71,7 @@ export function flattenLandmarks(landmarks) {
     return new Float32Array(flat);
     
   } catch (error) {
-    console.error('flattenLandmarks: Error processing landmarks:', error);
+    console.warn('flattenLandmarks: Error processing landmarks:', error);
     return null;
   }
 }
@@ -86,19 +86,19 @@ export function flattenLandmarks(landmarks) {
 export function computeCentroid(landmarks) {
   // Validate input
   if (!landmarks || !Array.isArray(landmarks)) {
-    console.error('computeCentroid: landmarks must be an array');
+    console.warn('computeCentroid: landmarks must be an array');
     return null;
   }
   
   if (landmarks.length !== 21) {
-    console.error(`computeCentroid: Expected 21 landmarks, got ${landmarks.length}`);
+    console.warn(`computeCentroid: Expected 21 landmarks, got ${landmarks.length}`);
     return null;
   }
   
   // Validate each landmark has at least x, y coordinates
   for (let i = 0; i < landmarks.length; i++) {
     if (!Array.isArray(landmarks[i]) || landmarks[i].length < 2) {
-      console.error(`computeCentroid: Invalid landmark at index ${i}, expected [x, y, z] format`);
+      console.warn(`computeCentroid: Invalid landmark at index ${i}, expected [x, y, z] format`);
       return null;
     }
   }

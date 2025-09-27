@@ -12,9 +12,6 @@ const Sidebar = ({ hidden = false }) => {
           <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/" end>
             <Icon name="home" /> Landing Page
           </NavLink>
-          <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/cookbook">
-            <Icon name="book" /> Cookbook
-          </NavLink>
           <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/dashboards">
             <Icon name="camera" /> Dashboards
           </NavLink>

@@ -67,16 +67,6 @@ npx serve -s build
 - Right: Gesture Mappings — configure actions per gesture; changes apply globally across pages and persist in localStorage.
 - Mappings update other pages in real time (within the SPA) and persist across reloads.
 
-### Cookbook Page — Camera & Gestures
-- Open the Cookbook page to see a two-pane layout: book/photo area on the left and a camera panel on the right.
-- Click "Enable Detection" in the camera panel to start the same camera + gesture pipeline used on the Landing page.
-- Default mappings on Cookbook:
-  - Open Hand (palm): scroll down content
-  - Fist: scroll up content
-  - Swipe Left: previous page
-  - Swipe Right: next page
-- Gesture label and confidence bar update live under the camera. Use the Overlays toggle to show/hide detector overlays.
-- Keyboard fallback: use ArrowLeft/ArrowRight to navigate pages.
 
 ### 1. Initial Setup
 1. **Grant Camera Permissions** - Allow camera access when prompted

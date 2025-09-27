@@ -11,7 +11,8 @@
     "activeTab",
     "storage",
     "tabs",
-    "scripting"
+    "scripting",
+    "offscreen"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -27,6 +28,14 @@
       "run_at": "document_idle"
     }
   ],
+  "commands": {
+    "toggle_overlay": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+G"
+      },
+      "description": "Toggle VibeCTRL overlay on current tab"
+    }
+  },
   "web_accessible_resources": [
     {
       "resources": [

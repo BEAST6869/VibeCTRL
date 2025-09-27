@@ -534,6 +534,20 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Extension pop-out sizing */
+.ext-context .app-layout {
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 56px 1fr;
+}
+.ext-context .topbar { padding: 8px 12px; }
+.ext-context .sidebar { padding: 12px; }
+.ext-context .content { padding: 12px; }
+
+/* Slightly tighter grid in detached window */
+.ext-detached .dashboard-grid-polished { grid-template-columns: 1.6fr 1fr; gap: 12px; }
+.ext-detached .brutal-card { padding: 12px; }
+.ext-detached .button-brutal { padding: 10px 14px; }
 .cookbook-main {
   min-width: 0;
 }

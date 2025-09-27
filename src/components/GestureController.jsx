@@ -178,9 +178,12 @@ const [gestureMappings, setGestureMappings] = useState({});
 
         // Draw landmarks for each detected hand
         predictions.forEach((prediction, handIndex) => {
-          const landmarks = prediction.landmarks;
+          const landmarks = prediction && Array.isArray(prediction.landmarks) ? prediction.landmarks : null;
+          if (!landmarks || !Array.isArray(landmarks) || landmarks.length < 2) {
+            return; // skip invalid frame without logging errors
+          }
           
-          // Extract features and centroid
+          // Extract features and centroid (robustly)
           const features = flattenLandmarks(landmarks);
           const centroid = computeCentroid(landmarks);
           
@@ -797,7 +800,11 @@ const triggerAction = (actionLabel, confidence) => {
       }
 
       // Use first detected hand
-      const landmarks = hands[0].landmarks;
+      const landmarks = hands[0] && Array.isArray(hands[0].landmarks) ? hands[0].landmarks : null;
+      if (!landmarks || !Array.isArray(landmarks) || landmarks.length < 2) {
+        // Invalid or missing landmarks; skip this tick quietly
+        return;
+      }
       
       // Extract features and centroid
       const features = flattenLandmarks(landmarks);
