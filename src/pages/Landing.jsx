@@ -2,6 +2,7 @@ import React from 'react';
 import BrutalHeader from '../ui/brutal/BrutalHeader';
 import BrutalButton from '../ui/brutal/BrutalButton';
 import BrutalCard from '../ui/brutal/BrutalCard';
+import Icon from '../ui/icons/Icon';
 
 const Landing = () => {
   return (
@@ -13,10 +14,10 @@ const Landing = () => {
         </p>
         <div style={{ marginTop: 12, display: 'flex', gap: 12 }}>
           <BrutalButton aria-label="Go to dashboard" onClick={() => window.location.assign('/dashboard')}>
-            ▶ Start Camera
+            <Icon name="start" /> Start Camera
           </BrutalButton>
           <BrutalButton variant="outline" aria-label="Open settings" onClick={() => window.location.assign('/settings')}>
-            ⚙️ Settings
+            <Icon name="settings" /> Settings
           </BrutalButton>
         </div>
       </BrutalCard>

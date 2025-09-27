@@ -1,21 +1,22 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import BrutalHeader from '../ui/brutal/BrutalHeader';
+import Icon from '../ui/icons/Icon';
 
-const Sidebar = () => {
+const Sidebar = ({ hidden = false }) => {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${hidden ? 'hidden' : ''}`}>
       <BrutalHeader title="VibeCTRL" subtitle="Gesture Demo" />
       <nav aria-label="Primary">
         <div className="nav-group" style={{ marginTop: 12 }}>
           <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/" end>
-            🏁 Landing
+            <Icon name="home" /> Landing
           </NavLink>
           <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/dashboard">
-            📹 Dashboard
+            <Icon name="camera" /> Dashboard
           </NavLink>
           <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/settings">
-            ⚙️ Settings
+            <Icon name="settings" /> Settings
           </NavLink>
         </div>
       </nav>

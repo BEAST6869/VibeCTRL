@@ -4,6 +4,7 @@ import BrutalHeader from '../ui/brutal/BrutalHeader';
 import BrutalButton from '../ui/brutal/BrutalButton';
 import GestureController from '../components/GestureController';
 import DemoArea from '../components/DemoArea';
+import Icon from '../ui/icons/Icon';
 
 const Dashboard = () => {
   return (
@@ -20,11 +21,21 @@ const Dashboard = () => {
         <BrutalCard offset="down" style={{ marginTop: 8 }}>
           <p style={{ marginBottom: 8 }}>Status renders over the camera feed. Use this card for quick controls:</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <BrutalButton variant="outline" aria-label="Play/Pause test" onClick={() => window.demoAreaActions?.toggleVideo?.()}>▶/⏸</BrutalButton>
-            <BrutalButton variant="outline" aria-label="Vol up" onClick={() => window.demoAreaActions?.volumeUp?.()}>🔊 +</BrutalButton>
-            <BrutalButton variant="outline" aria-label="Vol down" onClick={() => window.demoAreaActions?.volumeDown?.()}>🔉 −</BrutalButton>
-            <BrutalButton variant="outline" aria-label="Prev slide" onClick={() => window.demoAreaActions?.prevSlide?.()}>← Prev</BrutalButton>
-            <BrutalButton variant="outline" aria-label="Next slide" onClick={() => window.demoAreaActions?.nextSlide?.()}>Next →</BrutalButton>
+            <BrutalButton variant="outline" aria-label="Play/Pause test" onClick={() => window.demoAreaActions?.toggleVideo?.()}>
+              <Icon name="play" size={16} />
+            </BrutalButton>
+            <BrutalButton variant="outline" aria-label="Vol up" onClick={() => window.demoAreaActions?.volumeUp?.()}>
+              <Icon name="volume-up" size={16} />
+            </BrutalButton>
+            <BrutalButton variant="outline" aria-label="Vol down" onClick={() => window.demoAreaActions?.volumeDown?.()}>
+              <Icon name="volume-down" size={16} />
+            </BrutalButton>
+            <BrutalButton variant="outline" aria-label="Prev slide" onClick={() => window.demoAreaActions?.prevSlide?.()}>
+              <Icon name="arrow-left" size={16} /> Prev
+            </BrutalButton>
+            <BrutalButton variant="outline" aria-label="Next slide" onClick={() => window.demoAreaActions?.nextSlide?.()}>
+              Next <Icon name="arrow-right" size={16} />
+            </BrutalButton>
           </div>
         </BrutalCard>
         <BrutalHeader title="Action History" className="asym-1" />

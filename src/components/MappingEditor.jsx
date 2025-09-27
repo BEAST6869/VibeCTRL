@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ACTION_TYPES, 
   ACTION_DESCRIPTIONS, 
@@ -6,34 +6,44 @@ import {
   loadMappings,
   saveMappings,
   validateMappings,
-  getDefaultMapping
+  getDefaultMapping,
+  canTrigger,
+  executeMappedAction,
+  getOrCreateUserId,
+  importMappings as importMappingsUtil,
+  exportMappings as exportMappingsUtil
 } from '../utils/actions';
+import BrutalButton from '../ui/brutal/BrutalButton';
+import BrutalInput from '../ui/brutal/BrutalInput';
 
-const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
+const MappingEditor = ({ labels = [], onMappingsChange = null, userId: providedUserId = null }) => {
   const [mappings, setMappings] = useState({});
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [userId, setUserId] = useState(providedUserId || null);
+  const fileInputRef = useRef(null);
 
-  // Load mappings on component mount or when labels change
-  useEffect(() => {
-    const loadedMappings = loadMappings(labels);
-    setMappings(loadedMappings);
-    setHasUnsavedChanges(false);
-    
-    if (onMappingsChange) {
-      onMappingsChange(loadedMappings);
-    }
-  }, [labels, onMappingsChange]);
+// Init user id and load mappings on mount/labels change
+useEffect(() => {
+  const id = providedUserId || getOrCreateUserId();
+  setUserId(id);
+  const loadedMappings = loadMappings(labels, id);
+  setMappings(loadedMappings);
+  setHasUnsavedChanges(false);
+  if (onMappingsChange) onMappingsChange(loadedMappings);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [labels]);
 
   // Handle action type change for a label
-  const handleActionChange = (label, actionType) => {
-    const newMappings = {
-      ...mappings,
-      [label]: {
-        action: actionType,
-        params: { ...DEFAULT_ACTION_PARAMS[actionType] }
-      }
-    };
+const handleActionChange = (label, actionType) => {
+  const newMappings = {
+    ...mappings,
+    [label]: {
+      action: actionType,
+      params: { ...DEFAULT_ACTION_PARAMS[actionType] },
+      lastTriggered: mappings[label]?.lastTriggered || 0
+    }
+  };
     
     setMappings(newMappings);
     setHasUnsavedChanges(true);
@@ -64,45 +74,92 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
     }
   };
 
-  // Save mappings to localStorage
-  const handleSave = () => {
-    const validation = validateMappings(mappings);
-    
-    if (!validation.isValid) {
-      alert(`Cannot save mappings: ${validation.errors.join(', ')}`);
-      return;
-    }
-    
-    if (validation.warnings.length > 0) {
-      const proceed = window.confirm(
-        `Warning: ${validation.warnings.join(', ')}\n\nDo you want to save anyway?`
-      );
-      if (!proceed) return;
-    }
-    
-    if (saveMappings(mappings)) {
-      setHasUnsavedChanges(false);
-      alert('Gesture mappings saved successfully!');
+// Save mappings to localStorage (per user)
+const handleSave = () => {
+  const validation = validateMappings(mappings);
+  if (!validation.isValid) {
+    alert(`Cannot save mappings: ${validation.errors.join(', ')}`);
+    return;
+  }
+  if (validation.warnings.length > 0) {
+    const proceed = window.confirm(
+      `Warning: ${validation.warnings.join(', ')}\n\nDo you want to save anyway?`
+    );
+    if (!proceed) return;
+  }
+  if (saveMappings(mappings, userId)) {
+    setHasUnsavedChanges(false);
+    alert('Gesture mappings saved successfully!');
+  }
+};
+
+// Reset to default mappings
+const handleReset = () => {
+  if (hasUnsavedChanges) {
+    const proceed = window.confirm('You have unsaved changes. Are you sure you want to reset to defaults?');
+    if (!proceed) return;
+  }
+  const defaultMappings = getDefaultMapping(labels);
+  setMappings(defaultMappings);
+  setHasUnsavedChanges(true);
+  if (onMappingsChange) onMappingsChange(defaultMappings);
+};
+
+// Import/Export handlers
+const handleExport = () => {
+  const payload = exportMappingsUtil(mappings, userId);
+  const jsonString = JSON.stringify(payload, null, 2);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const el = document.createElement('a');
+  el.href = url;
+  el.download = `vibectrl-mappings-${userId}-${ts}.json`;
+  document.body.appendChild(el);
+  el.click();
+  document.body.removeChild(el);
+  URL.revokeObjectURL(url);
+};
+
+const handleImportClick = () => fileInputRef.current?.click();
+
+const handleImportFile = (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = importMappingsUtil(reader.result);
+      if (Object.keys(imported).length === 0) {
+        alert('Invalid mapping JSON');
+        return;
+      }
+      setMappings(imported);
+      setHasUnsavedChanges(true);
+      if (onMappingsChange) onMappingsChange(imported);
+    } catch (err) {
+      alert(`Import failed: ${err.message}`);
+    } finally {
+      e.target.value = '';
     }
   };
+  reader.readAsText(file);
+};
 
-  // Reset to default mappings
-  const handleReset = () => {
-    if (hasUnsavedChanges) {
-      const proceed = window.confirm('You have unsaved changes. Are you sure you want to reset to defaults?');
-      if (!proceed) return;
-    }
-    
-    const defaultMappings = getDefaultMapping(labels);
-    setMappings(defaultMappings);
-    setHasUnsavedChanges(true);
-    
-    if (onMappingsChange) {
-      onMappingsChange(defaultMappings);
-    }
-  };
+// Quick test execution per mapping
+const handleTest = (label) => {
+  const mapping = mappings[label];
+  if (!mapping) return;
+  if (canTrigger(mapping)) {
+    executeMappedAction(mapping);
+    // force re-render so "last" timestamp reflects immediately
+    setMappings({ ...mappings });
+  } else {
+    console.log('⏱️ Cooldown/anti-spam active; test suppressed');
+  }
+};
 
-  // Render parameter inputs based on action type
+// Render parameter inputs based on action type
   const renderParameterInputs = (label, mapping) => {
     if (!mapping || !mapping.action) return null;
     
@@ -112,9 +169,9 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
       case ACTION_TYPES.SCROLL_DOWN:
       case ACTION_TYPES.SCROLL_UP:
         return (
-          <div className="param-input">
+<div className="param-input">
             <label>Pixels:</label>
-            <input
+            <BrutalInput.Input
               type="number"
               min="50"
               max="1000"
@@ -122,6 +179,7 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
               value={params.pixels || DEFAULT_ACTION_PARAMS[action].pixels}
               onChange={(e) => handleParamChange(label, 'pixels', parseInt(e.target.value) || 0)}
               placeholder="300"
+              aria-label={`Scroll pixels for ${label}`}
             />
           </div>
         );
@@ -129,9 +187,9 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
       case ACTION_TYPES.VOLUME_UP:
       case ACTION_TYPES.VOLUME_DOWN:
         return (
-          <div className="param-input">
+<div className="param-input">
             <label>Volume Change:</label>
-            <input
+            <BrutalInput.Input
               type="number"
               min="0.01"
               max="0.5"
@@ -139,6 +197,7 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
               value={params.amount || DEFAULT_ACTION_PARAMS[action].amount}
               onChange={(e) => handleParamChange(label, 'amount', parseFloat(e.target.value) || 0.1)}
               placeholder="0.1"
+              aria-label={`Volume delta for ${label}`}
             />
           </div>
         );
@@ -147,7 +206,7 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
         return (
           <div className="param-input">
             <label>Key:</label>
-            <select
+<BrutalInput.Select
               value={params.key || DEFAULT_ACTION_PARAMS[action].key}
               onChange={(e) => handleParamChange(label, 'key', e.target.value)}
             >
@@ -161,7 +220,7 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
               <option value="Tab">Tab</option>
               <option value="Backspace">Backspace</option>
               <option value="Delete">Delete</option>
-            </select>
+</BrutalInput.Select>
           </div>
         );
         
@@ -170,7 +229,7 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
         return (
           <div className="param-input">
             <label>Key:</label>
-            <select
+<BrutalInput.Select
               value={params.key || DEFAULT_ACTION_PARAMS[action].key}
               onChange={(e) => handleParamChange(label, 'key', e.target.value)}
             >
@@ -181,7 +240,7 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
               <option value="Space">Space</option>
               <option value="PageUp">Page Up</option>
               <option value="PageDown">Page Down</option>
-            </select>
+</BrutalInput.Select>
           </div>
         );
         
@@ -189,11 +248,12 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
         return (
           <div className="param-input">
             <label>CSS Selector:</label>
-            <input
+<BrutalInput.Input
               type="text"
               value={params.selector || DEFAULT_ACTION_PARAMS[action].selector}
               onChange={(e) => handleParamChange(label, 'selector', e.target.value)}
               placeholder="button, .class, #id"
+              aria-label={`CSS selector for ${label}`}
             />
           </div>
         );
@@ -217,25 +277,36 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
     );
   }
 
-  return (
+return (
     <div className="mapping-editor">
       <div className="mapping-header">
         <h3>Gesture Action Mapping</h3>
         <p>Configure what actions to perform when gestures are recognized</p>
-        
-        <div className="mapping-controls">
-          <button
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 800 }}>User: {userId || 'loading...'}</span>
+          <BrutalButton
             className="toggle-button"
             onClick={() => setIsExpanded(!isExpanded)}
+            aria-label="Toggle mapping visibility"
           >
             {isExpanded ? '▲ Hide Mappings' : '▼ Show Mappings'}
-          </button>
-          
+          </BrutalButton>
           {hasUnsavedChanges && (
-            <div className="unsaved-indicator">
-              ● Unsaved changes
-            </div>
+            <div className="unsaved-indicator">● Unsaved changes</div>
           )}
+          <BrutalButton variant="outline" onClick={handleExport} aria-label="Export mappings JSON">
+            Export JSON
+          </BrutalButton>
+          <BrutalButton variant="outline" onClick={handleImportClick} aria-label="Import mappings JSON">
+            Import JSON
+          </BrutalButton>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            onChange={handleImportFile}
+          />
         </div>
       </div>
 
@@ -245,7 +316,7 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
             {labels.map(label => {
               const mapping = mappings[label] || { action: ACTION_TYPES.NOOP, params: {} };
               
-              return (
+return (
                 <div key={label} className="mapping-item">
                   <div className="label-info">
                     <div className="label-name">{label}</div>
@@ -254,21 +325,30 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
                   
                   <div className="action-config">
                     <div className="action-select">
-                      <select
+                      <BrutalInput.Select
                         value={mapping.action}
                         onChange={(e) => handleActionChange(label, e.target.value)}
                         className="action-dropdown"
+                        aria-label={`Select action for ${label}`}
                       >
                         {Object.values(ACTION_TYPES).map(actionType => (
                           <option key={actionType} value={actionType}>
                             {ACTION_DESCRIPTIONS[actionType]}
                           </option>
                         ))}
-                      </select>
+                      </BrutalInput.Select>
                     </div>
                     
                     <div className="action-params">
                       {renderParameterInputs(label, mapping)}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                      <BrutalButton variant="outline" onClick={() => handleTest(label)} aria-label={`Test ${label} mapping`}>
+                        Test
+                      </BrutalButton>
+                      <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                        last: {mapping.lastTriggered ? new Date(mapping.lastTriggered).toLocaleTimeString() : 'never'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -277,20 +357,21 @@ const MappingEditor = ({ labels = [], onMappingsChange = null }) => {
           </div>
           
           <div className="mapping-actions">
-            <button 
+<BrutalButton 
               className="save-button"
               onClick={handleSave}
               disabled={!hasUnsavedChanges}
             >
               💾 Save Mappings
-            </button>
+            </BrutalButton>
             
-            <button 
+            <BrutalButton 
               className="reset-button"
+              variant="outline"
               onClick={handleReset}
             >
               🔄 Reset to Defaults
-            </button>
+            </BrutalButton>
           </div>
           
           <div className="mapping-help">

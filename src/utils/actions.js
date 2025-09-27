@@ -48,6 +48,71 @@ export const ACTION_DESCRIPTIONS = {
   [ACTION_TYPES.NOOP]: 'No action'
 };
 
+// Cooldown and anti-repetition
+export const COOLDOWN_MS = 700;
+const RECENT_WINDOW_MS = 700; // prevent rapid repeats of same action
+const recentActions = [];
+
+const pruneRecent = (now) => {
+  while (recentActions.length && now - recentActions[0].timestamp > RECENT_WINDOW_MS) {
+    recentActions.shift();
+  }
+};
+
+export function canTrigger(mapping) {
+  const now = Date.now();
+  if (!mapping) return false;
+  if (typeof mapping.lastTriggered !== 'number') {
+    mapping.lastTriggered = 0;
+  }
+  if (now - mapping.lastTriggered < COOLDOWN_MS) {
+    return false;
+  }
+  // Anti-repetition: block same action within recent window
+  pruneRecent(now);
+  const sameActionRecently = recentActions.some((a) => a.action === mapping.action && now - a.timestamp < RECENT_WINDOW_MS);
+  if (sameActionRecently) return false;
+  // Mark as triggered
+  mapping.lastTriggered = now;
+  recentActions.push({ action: mapping.action, timestamp: now });
+  return true;
+}
+
+// Per-user storage helpers
+function uuidv4() {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const buf = new Uint8Array(16);
+    crypto.getRandomValues(buf);
+    buf[6] = (buf[6] & 0x0f) | 0x40;
+    buf[8] = (buf[8] & 0x3f) | 0x80;
+    const hex = [...buf].map(b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+  }
+  // Fallback
+  return 'xxxxxxxxyxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+export function getOrCreateUserId() {
+  try {
+    let id = localStorage.getItem('vibe_user_id');
+    if (!id) {
+      id = uuidv4();
+      localStorage.setItem('vibe_user_id', id);
+    }
+    return id;
+  } catch (e) {
+    // If storage fails, return a volatile session id
+    return uuidv4();
+  }
+}
+
+function storageKey(userId) {
+  return `vibe_user_mappings_${userId}`;
+}
+
 /**
  * Show toast notification
  * @param {string} message - Message to display
@@ -210,84 +275,83 @@ const executeScroll = (direction, pixels) => {
 };
 
 /**
- * Execute video toggle action
+ * Execute video toggle action (demo media only)
  */
 const executeVideoToggle = () => {
   try {
-    const videos = document.querySelectorAll('video');
-    const audios = document.querySelectorAll('audio');
-    const mediaElements = [...videos, ...audios];
-    
-    if (mediaElements.length === 0) {
-      console.warn('⚠️ No media elements found on page');
-      showToast('No media element found on page', 'error');
+    // Target only demo media elements, not the live camera feed
+    const mediaElements = document.querySelectorAll('.demo-video, .demo-audio');
+
+    if (!mediaElements || mediaElements.length === 0) {
+      console.warn('⚠️ No demo media elements found');
+      showToast('No demo media found', 'error');
       return false;
     }
-    
-    // Toggle all media elements
+
+    // Determine if any demo media is currently playing
     let anyPlaying = false;
     mediaElements.forEach(media => {
       if (!media.paused) {
         anyPlaying = true;
       }
     });
-    
+
+    // Toggle play/pause for demo media only
     mediaElements.forEach(media => {
       if (anyPlaying) {
         media.pause();
       } else {
         media.play().catch(err => {
-          console.warn('⚠️ Failed to play media:', err);
+          console.warn('⚠️ Failed to play demo media:', err);
         });
       }
     });
-    
+
     const action = anyPlaying ? 'paused' : 'playing';
-    console.log(`🎬 All media ${action}`);
-    showToast(`Media ${action}`, 'success');
-    
+    console.log(`🎬 Demo media ${action}`);
+    showToast(`Demo media ${action}`, 'success');
+
     return true;
   } catch (error) {
-    console.error('❌ Video toggle failed:', error);
-    showToast('Failed to toggle media', 'error');
+    console.error('❌ Demo video toggle failed:', error);
+    showToast('Failed to toggle demo media', 'error');
     return false;
   }
 };
 
 /**
- * Execute volume control action
+ * Execute volume control action (demo media only)
  * @param {string} direction - 'up' or 'down'
  * @param {number} amount - Volume change amount (0-1)
  */
 const executeVolumeControl = (direction, amount) => {
   try {
-    const videos = document.querySelectorAll('video');
-    const audios = document.querySelectorAll('audio');
-    const mediaElements = [...videos, ...audios];
-    
-    if (mediaElements.length === 0) {
-      console.warn('⚠️ No media elements found on page');
-      showToast('No media element found on page', 'error');
+    // Target only demo media elements, not the live camera feed
+    const mediaElements = document.querySelectorAll('.demo-video, .demo-audio');
+
+    if (!mediaElements || mediaElements.length === 0) {
+      console.warn('⚠️ No demo media elements found');
+      showToast('No demo media found', 'error');
       return false;
     }
-    
+
     const change = direction === 'up' ? amount : -amount;
     let newVolume = 0;
-    
+
     mediaElements.forEach(media => {
       const currentVolume = media.volume;
       newVolume = Math.max(0, Math.min(1, currentVolume + change));
       media.volume = newVolume;
     });
-    
+
     const volumePercent = Math.round(newVolume * 100);
-    console.log(`🔊 Volume ${direction}: ${volumePercent}%`);
-    showToast(`Volume: ${volumePercent}%`, 'success');
-    
+    console.log(`🔊 Demo volume ${direction}: ${volumePercent}%`);
+    showToast(`Demo volume: ${volumePercent}%`, 'success');
+
     return true;
   } catch (error) {
-    console.error('❌ Volume control failed:', error);
-    showToast('Failed to control volume', 'error');
+    console.error('❌ Demo volume control failed:', error);
+    showToast('Failed to control demo volume', 'error');
     return false;
   }
 };
@@ -468,59 +532,77 @@ export const executeMappedAction = (mapping) => {
 };
 
 /**
+ * Normalize mapping object to include lastTriggered field
+ */
+function normalizeMappings(mappings) {
+  const out = {};
+  Object.entries(mappings || {}).forEach(([gesture, cfg]) => {
+    if (cfg && typeof cfg === 'object') {
+      out[gesture] = {
+        action: cfg.action,
+        params: cfg.params || {},
+        lastTriggered: typeof cfg.lastTriggered === 'number' ? cfg.lastTriggered : 0
+      };
+    }
+  });
+  return out;
+}
+
+/**
  * Get default mapping for gesture labels
  * @param {Array} labels - Array of gesture labels
  * @returns {Object} Default mapping configuration
  */
 export const getDefaultMapping = (labels) => {
-  const defaultMapping = {};
+  const base = {};
   
   // Provide sensible defaults for common labels
-  labels.forEach((label, index) => {
+  labels.forEach((label) => {
     switch (label.toLowerCase()) {
       case 'open_hand':
       case 'open':
       case 'palm':
-        defaultMapping[label] = { action: ACTION_TYPES.SCROLL_DOWN, params: { pixels: 300 } };
+        base[label] = { action: ACTION_TYPES.SCROLL_DOWN, params: { pixels: 300 } };
         break;
       case 'fist':
       case 'closed':
-        defaultMapping[label] = { action: ACTION_TYPES.TOGGLE_VIDEO, params: {} };
+        base[label] = { action: ACTION_TYPES.TOGGLE_VIDEO, params: {} };
         break;
       case 'thumbs_up':
       case 'thumbs':
       case 'like':
-        defaultMapping[label] = { action: ACTION_TYPES.VOLUME_UP, params: { amount: 0.1 } };
+        base[label] = { action: ACTION_TYPES.VOLUME_UP, params: { amount: 0.1 } };
         break;
       case 'thumbs_down':
       case 'dislike':
-        defaultMapping[label] = { action: ACTION_TYPES.VOLUME_DOWN, params: { amount: 0.1 } };
+        base[label] = { action: ACTION_TYPES.VOLUME_DOWN, params: { amount: 0.1 } };
         break;
       case 'peace':
       case 'victory':
-        defaultMapping[label] = { action: ACTION_TYPES.TAB_NEXT, params: {} };
+        base[label] = { action: ACTION_TYPES.TAB_NEXT, params: {} };
         break;
       case 'point':
       case 'finger':
-        defaultMapping[label] = { action: ACTION_TYPES.CLICK_SELECTOR, params: { selector: 'button' } };
+        base[label] = { action: ACTION_TYPES.CLICK_SELECTOR, params: { selector: 'button' } };
         break;
       default:
-        defaultMapping[label] = { action: ACTION_TYPES.NOOP, params: {} };
+        base[label] = { action: ACTION_TYPES.NOOP, params: {} };
         break;
     }
   });
-  
-  return defaultMapping;
+  return normalizeMappings(base);
 };
 
 /**
- * Save gesture mappings to localStorage
+ * Save gesture mappings to localStorage for a user
  * @param {Object} mappings - Mapping configuration object
+ * @param {string} [userId]
  */
-export const saveMappings = (mappings) => {
+export const saveMappings = (mappings, userId = getOrCreateUserId()) => {
   try {
-    localStorage.setItem('gesture-action-mappings', JSON.stringify(mappings));
-    console.log('💾 Gesture mappings saved to localStorage');
+    const key = storageKey(userId);
+    localStorage.setItem(key, JSON.stringify(mappings));
+    console.log(`💾 Gesture mappings saved to localStorage for user ${userId}`);
     return true;
   } catch (error) {
     console.error('❌ Failed to save mappings:', error);
@@ -530,17 +612,42 @@ export const saveMappings = (mappings) => {
 };
 
 /**
- * Load gesture mappings from localStorage
+ * Load gesture mappings from localStorage for a user
  * @param {Array} labels - Array of gesture labels for default fallback
+ * @param {string} [userId]
  * @returns {Object} Loaded or default mapping configuration
  */
-export const loadMappings = (labels = []) => {
+export const loadMappings = (labels = [], userId = getOrCreateUserId()) => {
   try {
-    const saved = localStorage.getItem('gesture-action-mappings');
+    // Preferred per-user key
+    const saved = localStorage.getItem(storageKey(userId));
     if (saved) {
       const parsed = JSON.parse(saved);
-      console.log('📥 Gesture mappings loaded from localStorage');
-      return parsed;
+      console.log('📥 Gesture mappings loaded from localStorage (per-user)');
+      // Support both object and array format
+      const normalized = Array.isArray(parsed)
+        ? parsed.reduce((acc, item) => {
+            if (item && item.gesture) {
+              acc[item.gesture] = {
+                action: item.action,
+                params: item.params || {},
+                lastTriggered: typeof item.lastTriggered === 'number' ? item.lastTriggered : 0
+              };
+            }
+            return acc;
+          }, {})
+        : parsed;
+      return normalizeMappings(normalized);
+    }
+    // Backward-compat legacy key
+    const legacy = localStorage.getItem('gesture-action-mappings');
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      console.log('📥 Loaded legacy gesture mappings (migrating to per-user key)');
+      const normalized = normalizeMappings(parsed);
+      // Migrate to per-user key
+      try { localStorage.setItem(storageKey(userId), JSON.stringify(normalized)); } catch {}
+      return normalized;
     }
   } catch (error) {
     console.error('❌ Failed to load mappings:', error);
@@ -549,6 +656,60 @@ export const loadMappings = (labels = []) => {
   
   // Return default mappings if loading fails or no saved mappings exist
   return getDefaultMapping(labels);
+};
+
+/**
+ * Export mappings as portable JSON array format
+ * @param {Object} mappings
+ * @param {string} [userId]
+ */
+export const exportMappings = (mappings, userId = getOrCreateUserId()) => {
+  const arr = Object.entries(mappings || {}).map(([gesture, cfg]) => ({
+    gesture,
+    action: cfg.action,
+    params: cfg.params || {},
+    lastTriggered: typeof cfg.lastTriggered === 'number' ? cfg.lastTriggered : 0,
+  }));
+  return {
+    version: '1.0.0',
+    userId,
+    exportedAt: new Date().toISOString(),
+    mappings: arr,
+  };
+};
+
+/**
+ * Import mappings from JSON (object or array format)
+ * @param {any} data
+ */
+export const importMappings = (data) => {
+  try {
+    const payload = typeof data === 'string' ? JSON.parse(data) : data;
+    const raw = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.mappings)
+        ? payload.mappings
+        : payload;
+    if (Array.isArray(raw)) {
+      const obj = raw.reduce((acc, item) => {
+        if (item && item.gesture) {
+          acc[item.gesture] = {
+            action: item.action,
+            params: item.params || {},
+            lastTriggered: typeof item.lastTriggered === 'number' ? item.lastTriggered : 0,
+          };
+        }
+        return acc;
+      }, {});
+      return normalizeMappings(obj);
+    }
+    if (raw && typeof raw === 'object') {
+      return normalizeMappings(raw);
+    }
+  } catch (e) {
+    console.error('❌ Failed to import mappings JSON:', e);
+  }
+  return {};
 };
 
 /**

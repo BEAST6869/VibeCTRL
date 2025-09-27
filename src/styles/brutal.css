@@ -207,6 +207,17 @@ p {
   .dashboard-grid { grid-template-columns: 1fr; }
 }
 
+/* Sidebar hide toggle */
+.app-layout.sidebar-hidden {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "topbar"
+    "content";
+}
+.sidebar.hidden {
+  display: none;
+}
+
 /* Asymmetry touches */
 .asym-1 { transform: translate(2px, -2px); }
 .asym-2 { transform: translate(-3px, 1px); }
@@ -395,4 +406,35 @@ p {
 .calibration-overlay {
   border-radius: var(--radius-small) !important;
   backdrop-filter: none !important;
+}
+
+/* Special button icon fixes */
+.record-button::before {
+  content: '●' !important;
+  margin-right: 6px !important;
+}
+
+.train-button::before {
+  content: '⚡' !important;
+  margin-right: 6px !important;
+}
+
+.load-button::before {
+  content: '↓' !important;
+  margin-right: 6px !important;
+}
+
+.export-button::before {
+  content: '↑' !important;
+  margin-right: 6px !important;
+}
+
+.test-button::before {
+  content: '⚗' !important;
+  margin-right: 6px !important;
+}
+
+.delete-button::before {
+  content: '×' !important;
+  margin-right: 6px !important;
 }

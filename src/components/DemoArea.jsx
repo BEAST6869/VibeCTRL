@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './DemoArea.css';
+import Icon from '../ui/icons/Icon';
 
 const DemoArea = () => {
   const videoRef = useRef(null);
@@ -125,14 +126,14 @@ const DemoArea = () => {
   return (
     <div className="demo-area">
       <div className="demo-header">
-        <h3>🎮 Demo Area - Test Your Gestures</h3>
+        <h3><Icon name="gamepad" size={20} /> Demo Area - Test Your Gestures</h3>
         <p>This area contains elements that respond to your trained gestures</p>
       </div>
       
       <div className="demo-content">
         {/* Video Player Section */}
         <div className="video-section">
-          <h4>📹 Video Player</h4>
+          <h4><Icon name="video" size={18} /> Video Player</h4>
           <div className="video-container">
             <video
               ref={videoRef}
@@ -149,35 +150,35 @@ const DemoArea = () => {
               Your browser does not support the video tag.
             </video>
             <div className="video-info">
-              <p>🎯 Map gestures to: Play/Pause, Volume Up/Down</p>
+              <p><Icon name="target" size={16} /> Map gestures to: Play/Pause, Volume Up/Down</p>
               <div className="demo-controls">
                 <button 
                   className="demo-action"
                   onClick={toggleVideo}
                   title="Test video control mapping"
                 >
-                  🎬 Toggle Video
+                  <Icon name="play" size={16} /> Toggle Video
                 </button>
                 <button 
                   className="demo-action"
                   onClick={() => adjustVolume(0.1)}
                   title="Test volume up"
                 >
-                  🔊 Volume Up
+                  <Icon name="volume-up" size={16} /> Volume Up
                 </button>
                 <button 
                   className="demo-action"
                   onClick={() => adjustVolume(-0.1)}
                   title="Test volume down"
                 >
-                  🔉 Volume Down
+                  <Icon name="volume-down" size={16} /> Volume Down
                 </button>
                 <button 
                   className="demo-action"
                   onClick={testMediaControls}
                   title="Test media detection"
                 >
-                  🔍 Test Media
+                  <Icon name="search" size={16} /> Test Media
                 </button>
               </div>
             </div>
@@ -186,7 +187,7 @@ const DemoArea = () => {
 
         {/* Audio Player Section */}
         <div className="audio-section">
-          <h4>🎵 Audio Player</h4>
+          <h4><Icon name="audio" size={18} /> Audio Player</h4>
           <div className="audio-container">
             <audio
               ref={videoRef}
@@ -199,14 +200,14 @@ const DemoArea = () => {
               Your browser does not support the audio element.
             </audio>
             <div className="audio-info">
-              <p>🎯 Test volume controls with audio element</p>
+              <p><Icon name="target" size={16} /> Test volume controls with audio element</p>
             </div>
           </div>
         </div>
 
         {/* Slide Deck Section */}
         <div className="slides-section">
-          <h4>🖼️ Interactive Slides</h4>
+          <h4><Icon name="slides" size={18} /> Interactive Slides</h4>
           <div className="slide-container">
             <div 
               className="slide"
@@ -249,7 +250,7 @@ const DemoArea = () => {
               </button>
             </div>
             <p className="slide-hint">
-              🎯 Map gestures to: ArrowLeft (previous), ArrowRight (next)
+              <Icon name="target" size={16} /> Map gestures to: ArrowLeft (previous), ArrowRight (next)
             </p>
           </div>
         </div>
@@ -257,14 +258,14 @@ const DemoArea = () => {
 
       {/* Action History */}
       <div className="action-history">
-        <h4>📊 Recent Actions</h4>
+        <h4><Icon name="chart" size={18} /> Recent Actions</h4>
         <div className="action-list">
           {actionHistory.length === 0 ? (
             <p className="no-actions">No actions triggered yet. Try using gestures!</p>
           ) : (
             actionHistory.map(action => (
               <div key={action.id} className="action-item">
-                <span className="action-name">⚡ {action.name}</span>
+                <span className="action-name"><Icon name="bolt" size={14} /> {action.name}</span>
                 <span className="action-time">{action.timestamp}</span>
                 <span className="action-slide">Slide {action.slide}</span>
               </div>
@@ -275,7 +276,7 @@ const DemoArea = () => {
 
       {/* Demo Instructions */}
       <div className="demo-instructions">
-        <h4>🎯 How to Test Gestures</h4>
+        <h4><Icon name="target" size={18} /> How to Test Gestures</h4>
         <ol>
           <li><strong>Train gestures:</strong> Use the data collection section to record different hand poses</li>
           <li><strong>Map actions:</strong> In the Mapping Editor, assign gestures to keyboard shortcuts like ArrowLeft/ArrowRight</li>
@@ -284,7 +285,7 @@ const DemoArea = () => {
         </ol>
         
         <div className="suggested-mappings">
-          <h5>💡 Suggested Mappings:</h5>
+          <h5><Icon name="help" size={16} /> Suggested Mappings:</h5>
           <ul>
             <li><code>open_hand</code> → Scroll down (Page navigation)</li>
             <li><code>fist</code> → Toggle video (Play/Pause media)</li>

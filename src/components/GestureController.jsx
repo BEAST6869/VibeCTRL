@@ -4,7 +4,7 @@ import * as handpose from '@tensorflow-models/handpose';
 import { flattenLandmarks, computeCentroid } from '../utils/features';
 import { DEFAULT_LABELS, INFERENCE_CONFIG, SWIPE_CONFIG } from '../constants';
 import { trainModel, loadModel, testModelPrediction, deleteModel, validateDataset } from '../ml/train';
-import { executeMappedAction, loadMappings } from '../utils/actions';
+import { executeMappedAction, loadMappings, canTrigger, getOrCreateUserId } from '../utils/actions';
 import MappingEditor from './MappingEditor';
 
 /**
@@ -37,9 +37,15 @@ const GestureController = () => {
   const lastInferenceTimeRef = useRef(0);
   const centroidHistoryRef = useRef([]);
   const lastSwipeTimeRef = useRef(0);
+<<<<<<< Updated upstream
   // Anti-spam and cooldown tracking
   const lastTriggeredRef = useRef({}); // per-gesture last trigger timestamp
   const recentActionsRef = useRef([]); // array of { label, timestamp }
+=======
+  // Anti-hold: require label release before firing same gesture again
+  const lastFiredLabelRef = useRef(null);
+  const hasResetSinceLastFireRef = useRef(true);
+>>>>>>> Stashed changes
   
   // File input ref for importing TF.js models (model.json + weights)
   const importInputRef = useRef(null);
@@ -56,7 +62,8 @@ const GestureController = () => {
   const [isInferenceActive, setIsInferenceActive] = useState(false);
   const [currentPrediction, setCurrentPrediction] = useState(null);
   const [lastTriggeredAction, setLastTriggeredAction] = useState(null);
-  const [gestureMappings, setGestureMappings] = useState({});
+const [gestureMappings, setGestureMappings] = useState({});
+  const [userId, setUserId] = useState(null);
   const [swipeAnimation, setSwipeAnimation] = useState(null);
   
   // UI Polish State
@@ -441,6 +448,7 @@ const GestureController = () => {
     return null;
   };
 
+<<<<<<< Updated upstream
   const triggerSwipeAction = (swipeDirection) => {
     const currentTime = Date.now();
     // Per-gesture cooldown check for swipes as well
@@ -465,6 +473,32 @@ const GestureController = () => {
           console.log(`✅ Swipe action executed successfully`);
         } else {
           console.log(`❌ Swipe action execution failed`);
+=======
+const triggerSwipeAction = (swipeDirection) => {
+    console.log(`🎯 SWIPE ACTION TRIGGERED: ${swipeDirection}`);
+    
+    // Create a synthetic action for the mapping system
+    const mapping = gestureMappings[swipeDirection];
+    if (mapping) {
+      console.log(`🎨 Executing mapped swipe action:`, mapping);
+      if (!canTrigger(mapping)) {
+        console.log('⏱️ Cooldown/anti-spam: swipe suppressed');
+        return false;
+      }
+      const success = executeMappedAction(mapping);
+      if (success) {
+        console.log(`✅ Swipe action executed successfully`);
+      } else {
+        console.log(`❌ Swipe action execution failed`);
+      }
+      return success;
+    } else {
+      // Default swipe actions if no mapping exists
+      const defaultMapping = {
+        action: swipeDirection === 'swipe_left' ? 'key_press' : 'key_press',
+        params: {
+          key: swipeDirection === 'swipe_left' ? 'ArrowLeft' : 'ArrowRight'
+>>>>>>> Stashed changes
         }
       } else {
         // Default swipe actions if no mapping exists
@@ -482,8 +516,9 @@ const GestureController = () => {
     return true;
   };
 
-  const triggerAction = (actionLabel, confidence) => {
+const triggerAction = (actionLabel, confidence) => {
     const currentTime = Date.now();
+<<<<<<< Updated upstream
 
     // Per-gesture cooldown
     const lastForGesture = lastTriggeredRef.current[actionLabel] || 0;
@@ -499,12 +534,40 @@ const GestureController = () => {
     setLastTriggeredAction({ label: actionLabel, confidence, timestamp: currentTime });
 
     // Show initial gesture animation immediately (optimistic)
+=======
+    
+    // High-level throttle between any actions (user adjustable)
+    if (currentTime - lastActionTimeRef.current < cooldownMs) {
+      console.log(`⏱️ Action cooldown active, skipping ${actionLabel}`);
+      return false;
+    }
+    
+    const mapping = gestureMappings[actionLabel];
+    if (!mapping) {
+      console.log(`⚠️ No mapping found for gesture: ${actionLabel}`);
+      showGestureAnimation(false, actionLabel);
+      return false;
+    }
+
+    // Per-mapping cooldown and anti-repetition
+    if (!canTrigger(mapping)) {
+      console.log(`⏱️ Mapping cooldown/anti-spam active for ${actionLabel}`);
+      return false;
+    }
+
+    console.log(`🎯 ACTION TRIGGERED: ${actionLabel} (${(confidence * 100).toFixed(1)}% confidence)`);
+    setLastTriggeredAction({ label: actionLabel, confidence, timestamp: currentTime, action: mapping.action });
+    lastActionTimeRef.current = currentTime;
+    
+    // Show gesture animation
+>>>>>>> Stashed changes
     showGestureAnimation(true, actionLabel);
 
     // Clear action indicator after 2 seconds
     setTimeout(() => {
       setLastTriggeredAction(null);
     }, 2000);
+<<<<<<< Updated upstream
 
     // Execute mapped action asynchronously to avoid blocking UI/inference loop
     setTimeout(() => {
@@ -540,6 +603,33 @@ const GestureController = () => {
     }, 0);
 
     return true; // scheduled
+=======
+    
+    console.log(`🎨 Executing mapped action for ${actionLabel}:`, mapping);
+    const success = executeMappedAction(mapping);
+    
+    // Voice feedback
+    let actionDescription = actionLabel;
+    if (mapping.action === 'key_press' && mapping.params?.key) {
+      actionDescription = `${actionLabel} - ${mapping.params.key}`;
+    }
+    speakAction(actionDescription);
+    
+    // Update animation based on success
+    showGestureAnimation(success, actionLabel);
+    
+    // Log to demo area if available
+    if (window.demoAreaActions?.logAction) {
+      window.demoAreaActions.logAction(`${actionLabel} (${(confidence * 100).toFixed(1)}%)`);
+    }
+    
+    if (success) {
+      console.log(`✅ Action executed successfully`);
+    } else {
+      console.log(`❌ Action execution failed`);
+    }
+    return success;
+>>>>>>> Stashed changes
   };
 
   // Handle mapping changes from MappingEditor
@@ -712,6 +802,8 @@ const GestureController = () => {
       const swipeDirection = detectSwipe();
       if (swipeDirection) {
         triggerSwipeAction(swipeDirection);
+        // Treat swipe as release for regular gestures
+        hasResetSinceLastFireRef.current = true;
         return; // Skip regular inference when swipe is detected
       }
 
@@ -759,12 +851,29 @@ const GestureController = () => {
         const majorityLabel = modelMetadata.indexToLabel[majorityVote.prediction];
         console.log(`📈 Majority vote: ${majorityLabel} (${majorityVote.votes}/${majorityVote.total} votes)`);
         
+        // Mark reset allowed if label changed from the last fired
+        if (lastFiredLabelRef.current && majorityLabel !== lastFiredLabelRef.current) {
+          hasResetSinceLastFireRef.current = true;
+        }
+        
         // Check if conditions are met for action trigger (using dynamic threshold)
         if (majorityVote.prediction === topPredictionIndex && 
             maxProbability >= confidenceThreshold) {
-          
-          triggerAction(majorityLabel, maxProbability);
+          const sameAsLast = lastFiredLabelRef.current === majorityLabel;
+          const allowed = !sameAsLast || hasResetSinceLastFireRef.current;
+          if (allowed) {
+            const ok = triggerAction(majorityLabel, maxProbability);
+            if (ok) {
+              lastFiredLabelRef.current = majorityLabel;
+              hasResetSinceLastFireRef.current = false;
+            }
+          } else {
+            console.log(`🧯 Hold suppression: ${majorityLabel} not re-fired until release`);
+          }
         }
+      } else {
+        // No majority detected: treat as release
+        hasResetSinceLastFireRef.current = true;
       }
       
     } catch (error) {
@@ -820,16 +929,26 @@ const GestureController = () => {
     }
   }, [isInferenceActive, trainedModel, modelMetadata]);
 
-  // Auto-start inference when model is loaded/trained
-  useEffect(() => {
-    if (trainedModel && modelMetadata && !isInferenceActive && !isRecording) {
-      console.log('🤖 Auto-starting inference with loaded model');
-      startInference();
-    } else if (!trainedModel && isInferenceActive) {
-      console.log('🚫 Auto-stopping inference - no model available');
-      stopInference();
-    }
-  }, [trainedModel, modelMetadata, isRecording]);
+// Load per-user mappings once model labels are known
+useEffect(() => {
+  if (modelMetadata?.indexToLabel) {
+    const id = getOrCreateUserId();
+    setUserId(id);
+    const loaded = loadMappings(modelMetadata.indexToLabel, id);
+    setGestureMappings(loaded);
+  }
+}, [modelMetadata]);
+
+// Auto-start inference when model is loaded/trained
+useEffect(() => {
+  if (trainedModel && modelMetadata && !isInferenceActive && !isRecording) {
+    console.log('🤖 Auto-starting inference with loaded model');
+    startInference();
+  } else if (!trainedModel && isInferenceActive) {
+    console.log('🚫 Auto-stopping inference - no model available');
+    stopInference();
+  }
+}, [trainedModel, modelMetadata, isRecording]);
 
   // Training and model management functions
   const handleTrainModel = async () => {
@@ -1078,9 +1197,9 @@ const GestureController = () => {
             </div>
           </div>
         )}
-        {lastTriggeredAction && (
+{lastTriggeredAction && (
           <div className="action-indicator">
-            ⚡ {lastTriggeredAction.label}
+            ⚡ {lastTriggeredAction.label} → {lastTriggeredAction.action || '...'} @ {new Date(lastTriggeredAction.timestamp).toLocaleTimeString()}
           </div>
         )}
         {swipeAnimation && (
@@ -1511,9 +1630,10 @@ const GestureController = () => {
         )}
       </div>
 
-      <MappingEditor 
+<MappingEditor 
         labels={modelMetadata ? modelMetadata.indexToLabel : []}
         onMappingsChange={handleMappingsChange}
+        userId={userId}
       />
 
       <div className="info">

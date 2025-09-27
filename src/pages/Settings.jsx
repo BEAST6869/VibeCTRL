@@ -4,6 +4,7 @@ import BrutalCard from '../ui/brutal/BrutalCard';
 import BrutalInput from '../ui/brutal/BrutalInput';
 import BrutalButton from '../ui/brutal/BrutalButton';
 import MappingEditor from '../components/MappingEditor';
+import Icon from '../ui/icons/Icon';
 
 const Settings = () => {
   const [threshold, setThreshold] = React.useState(0.7);
@@ -40,8 +41,12 @@ const Settings = () => {
             Voice feedback
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
-            <BrutalButton>Save</BrutalButton>
-            <BrutalButton variant="outline">Reset</BrutalButton>
+            <BrutalButton>
+              <Icon name="save" size={16} /> Save
+            </BrutalButton>
+            <BrutalButton variant="outline">
+              <Icon name="reset" size={16} /> Reset
+            </BrutalButton>
           </div>
           <p style={{ color: 'var(--muted)' }}>
             Note: These settings are UI-only here. The Dashboard contains the live controls wired to the gesture system.
@@ -57,9 +62,15 @@ const Settings = () => {
       <BrutalHeader title="Import / Export" />
       <BrutalCard offset="right">
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <BrutalButton variant="outline" aria-label="Export dataset" onClick={() => alert('Use Dashboard → Export Dataset')}>💾 Export Dataset</BrutalButton>
-          <BrutalButton variant="outline" aria-label="Export model" onClick={() => alert('Use Dashboard → Export Model')}>📤 Export Model</BrutalButton>
-          <BrutalButton variant="invert" aria-label="Open dashboard" onClick={() => window.location.assign('/dashboard')}>Open Dashboard</BrutalButton>
+          <BrutalButton variant="outline" aria-label="Export dataset" onClick={() => alert('Use Dashboard → Export Dataset')}>
+            <Icon name="export" size={16} /> Export Dataset
+          </BrutalButton>
+          <BrutalButton variant="outline" aria-label="Export model" onClick={() => alert('Use Dashboard → Export Model')}>
+            <Icon name="export" size={16} /> Export Model
+          </BrutalButton>
+          <BrutalButton variant="invert" aria-label="Open dashboard" onClick={() => window.location.assign('/dashboard')}>
+            <Icon name="camera" size={16} /> Open Dashboard
+          </BrutalButton>
         </div>
       </BrutalCard>
     </div>
