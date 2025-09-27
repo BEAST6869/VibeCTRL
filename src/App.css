@@ -511,3 +511,110 @@
     max-width: none;
   }
 }
+
+/* Cookbook layout */
+.cookbook-split {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 16px;
+}
+
+/* Polished Dashboard layout */
+.dashboard-grid-polished {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+.dashboard-grid-polished .dash-left,
+.dashboard-grid-polished .dash-right {
+  min-width: 0;
+}
+@media (max-width: 1000px) {
+  .dashboard-grid-polished {
+    grid-template-columns: 1fr;
+  }
+}
+.cookbook-main {
+  min-width: 0;
+}
+.cookbook-side {
+  min-width: 240px;
+}
+@media (max-width: 900px) {
+  .cookbook-split {
+    grid-template-columns: 1fr;
+  }
+  .cookbook-side { order: 2; }
+  .cookbook-main { order: 1; }
+}
+
+/* Camera panel styling */
+.cookbook-camera-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 4px solid #000;
+  border-radius: 10px;
+  background: #fff;
+}
+.camera-panel-controls {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 4px solid #000;
+  background: #f8f8f8;
+}
+.camera-panel-controls .ctrl-btn {
+  border: 3px solid #000;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.camera-panel-controls .ctrl-btn.active {
+  background: #d1fae5;
+}
+.camera-panel-body {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 10px;
+}
+.camera-aspect {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 4px solid #000;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+.camera-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  height: 100%;
+  background: repeating-linear-gradient(45deg, #fafafa, #fafafa 10px, #f3f3f3 10px, #f3f3f3 20px);
+}
+.gesture-status {
+  display: grid;
+  gap: 6px;
+}
+.gesture-status .gesture-line {
+  font-weight: bold;
+  font-size: 14px;
+}
+.gesture-status .confidence-bar {
+  height: 10px;
+  border: 4px solid #000;
+  border-radius: 6px;
+  background: #eee;
+  overflow: hidden;
+}
+.gesture-status .confidence-fill {
+  height: 100%;
+  width: 0%;
+  background: #10b981;
+  transition: width 150ms linear;
+}

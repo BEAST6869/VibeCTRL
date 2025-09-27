@@ -120,6 +120,15 @@ function storageKey(userId) {
  */
 const showToast = (message, type = 'info') => {
   try {
+    // Disable toast notifications on Landing and Dashboard pages
+    const path = window.location.pathname || '';
+    const isLandingPage = path === '/' || path === '/landing';
+    const isDashboard = /\/dashboard$/i.test(path) || path.includes('/dashboard');
+    if (isLandingPage || isDashboard) {
+      console.log(`🔕 Toast suppressed on ${isLandingPage ? 'Landing' : 'Dashboard'}: [${type.toUpperCase()}] ${message}`);
+      return;
+    }
+    
     const toast = document.createElement('div');
     toast.className = `gesture-toast toast-${type}`;
     toast.textContent = message;
@@ -475,6 +484,15 @@ export const executeMappedAction = (mapping) => {
   const { action, params = {} } = mapping;
   
   console.log(`🎬 Executing action: ${action}`, params);
+
+  // If running in extension popup, delegate to background to execute in active tab
+  try {
+    const isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id && window.location.protocol === 'chrome-extension:';
+    if (isExtension) {
+      chrome.runtime.sendMessage({ type: 'VIBE_EXECUTE', action, params });
+      return true;
+    }
+  } catch {}
   
   try {
     switch (action) {
@@ -603,6 +621,19 @@ export const saveMappings = (mappings, userId = getOrCreateUserId()) => {
     const key = storageKey(userId);
     localStorage.setItem(key, JSON.stringify(mappings));
     console.log(`💾 Gesture mappings saved to localStorage for user ${userId}`);
+    // Mirror into chrome.storage.local if available (for extension content scripts)
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        const extKey = `vibe_mappings_${userId}`;
+        chrome.storage.local.set({ [extKey]: mappings }, () => {
+          // no-op callback
+        });
+      }
+    } catch {}
+    // Notify listeners in the same document (SPA) that mappings updated
+    try {
+      window.dispatchEvent(new CustomEvent('vibe:mappings-updated', { detail: { userId } }));
+    } catch {}
     return true;
   } catch (error) {
     console.error('❌ Failed to save mappings:', error);

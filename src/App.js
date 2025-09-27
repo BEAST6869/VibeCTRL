@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import './App.css';
+const CookbookLazy = React.lazy(() => import('./pages/Cookbook'));
 
 function App() {
   const [sidebarHidden, setSidebarHidden] = React.useState(false);
@@ -18,7 +19,12 @@ function App() {
         <main className="content">
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/landing" element={<Landing />} />
+            <Route path="/dashboards" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/cookbook" element={<React.Suspense fallback={null}>
+              <CookbookLazy />
+            </React.Suspense>} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
           </Routes>

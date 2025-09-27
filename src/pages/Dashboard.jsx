@@ -1,47 +1,48 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import BrutalCard from '../ui/brutal/BrutalCard';
 import BrutalHeader from '../ui/brutal/BrutalHeader';
-import BrutalButton from '../ui/brutal/BrutalButton';
 import GestureController from '../components/GestureController';
-import DemoArea from '../components/DemoArea';
-import Icon from '../ui/icons/Icon';
+import MappingEditor from '../components/MappingEditor';
 
 const Dashboard = () => {
+  const [labels, setLabels] = useState([]);
+
+  // Listen for model metadata from GestureController and update labels
+  useEffect(() => {
+    const fromLocal = () => {
+      try {
+        const metaStr = localStorage.getItem('gesture-model-metadata');
+        if (metaStr) {
+          const meta = JSON.parse(metaStr);
+          if (Array.isArray(meta.indexToLabel)) setLabels(meta.indexToLabel);
+        }
+      } catch {}
+    };
+    const onMeta = (e) => {
+      if (e?.detail?.labels && Array.isArray(e.detail.labels)) {
+        setLabels(e.detail.labels);
+      } else {
+        fromLocal();
+      }
+    };
+    window.addEventListener('vibe:model-metadata', onMeta);
+    // initial attempt
+    fromLocal();
+    return () => window.removeEventListener('vibe:model-metadata', onMeta);
+  }, []);
+
   return (
-    <div className="dashboard-grid">
-      <div>
-        <BrutalHeader title="Live Camera" subtitle="Hand landmarks with overlay" />
+    <div className="dashboard-grid-polished">
+      <div className="dash-left">
+        <BrutalHeader title="Camera & Training" subtitle="Train model and run inference" />
         <BrutalCard offset="right" style={{ marginTop: 8 }}>
-          {/* Wrap existing GestureController without modifying its logic */}
-          <GestureController />
+          <GestureController mode="full" enableCalibration={false} showMappingEditor={false} />
         </BrutalCard>
       </div>
-      <div>
-        <BrutalHeader title="Gesture Status" subtitle="Current label & confidence" />
+      <div className="dash-right">
+        <BrutalHeader title="Gesture Mappings" subtitle="Universal across all pages" />
         <BrutalCard offset="down" style={{ marginTop: 8 }}>
-          <p style={{ marginBottom: 8 }}>Status renders over the camera feed. Use this card for quick controls:</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <BrutalButton variant="outline" aria-label="Play/Pause test" onClick={() => window.demoAreaActions?.toggleVideo?.()}>
-              <Icon name="play" size={16} />
-            </BrutalButton>
-            <BrutalButton variant="outline" aria-label="Vol up" onClick={() => window.demoAreaActions?.volumeUp?.()}>
-              <Icon name="volume-up" size={16} />
-            </BrutalButton>
-            <BrutalButton variant="outline" aria-label="Vol down" onClick={() => window.demoAreaActions?.volumeDown?.()}>
-              <Icon name="volume-down" size={16} />
-            </BrutalButton>
-            <BrutalButton variant="outline" aria-label="Prev slide" onClick={() => window.demoAreaActions?.prevSlide?.()}>
-              <Icon name="arrow-left" size={16} /> Prev
-            </BrutalButton>
-            <BrutalButton variant="outline" aria-label="Next slide" onClick={() => window.demoAreaActions?.nextSlide?.()}>
-              Next <Icon name="arrow-right" size={16} />
-            </BrutalButton>
-          </div>
-        </BrutalCard>
-        <BrutalHeader title="Action History" className="asym-1" />
-        <BrutalCard offset="left" style={{ marginTop: 8 }}>
-          {/* The DemoArea includes a history list and media; reuse it here */}
-          <DemoArea />
+          <MappingEditor labels={labels} />
         </BrutalCard>
       </div>
     </div>

@@ -17,10 +17,7 @@ const Topbar = ({ sidebarHidden = false, onToggleSidebar = null }) => {
         >
           <Icon name="menu" /> {sidebarHidden ? 'Show' : 'Hide'} Sidebar
         </BrutalButton>
-        <BrutalButton variant="outline" aria-label="Get Help" onClick={() => window.location.assign('/help')}>
-          <Icon name="help" /> Help
-        </BrutalButton>
-        <BrutalButton variant="invert" aria-label="Start camera" onClick={() => window.location.assign('/dashboard')}>
+        <BrutalButton variant="invert" aria-label="Start camera" onClick={() => window.location.assign('/dashboards')}>
           <Icon name="start" /> Start Camera
         </BrutalButton>
       </div>
