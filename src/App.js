@@ -1,20 +1,27 @@
 import React from 'react';
-import GestureController from './components/GestureController';
-import DemoArea from './components/DemoArea';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Sidebar from './components/Sidebar';
+import Topbar from './components/Topbar';
+import Landing from './pages/Landing';
+import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
 import './App.css';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Vibe Gesture Controller</h1>
-        <p>Real-time hand landmark detection using TensorFlow.js</p>
-      </header>
-      <main className="App-main">
-        <GestureController />
-        <DemoArea />
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="app-layout">
+        <Sidebar />
+        <Topbar />
+        <main className="content">
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
 
