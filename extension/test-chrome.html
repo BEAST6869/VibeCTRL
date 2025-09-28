@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeCTRL Chrome Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .test-section h3 {
+            color: #555;
+            margin-top: 0;
+        }
+        .scrollable-content {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background: #f5f5f5;
+        }
+        .media-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .media-controls button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        .media-controls button:hover {
+            background: #0056b3;
+        }
+        .gesture-instructions {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .gesture-instructions h4 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        .gesture-list {
+            list-style: none;
+            padding: 0;
+        }
+        .gesture-list li {
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">VibeCTRL Test Page Ready</div>
+    
+    <div class="container">
+        <h1>🎮 VibeCTRL Chrome Extension Test</h1>
+        
+        <div class="gesture-instructions">
+            <h4>📋 Gesture Instructions</h4>
+            <p>Make sure the VibeCTRL extension is enabled and try these gestures:</p>
+            <ul class="gesture-list">
+                <li><strong>Open Hand (Palm)</strong> → Scroll Down</li>
+                <li><strong>Fist (Closed Hand)</strong> → Scroll Up</li>
+                <li><strong>Thumbs Up</strong> → Volume Up</li>
+                <li><strong>Thumbs Down</strong> → Volume Down</li>
+                <li><strong>Peace Sign</strong> → Toggle Video</li>
+                <li><strong>Point</strong> → Click Button</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>📜 Scroll Test Area</h3>
+            <p>Try the <strong>Open Hand</strong> gesture to scroll down, or <strong>Fist</strong> to scroll up in this area:</p>
+            <div class="scrollable-content" id="scrollTest">
+                <p>This is a scrollable test area. The VibeCTRL extension should be able to scroll this content using hand gestures.</p>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+                <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
+                <p>Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.</p>
+                <p>Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.</p>
+                <p>Sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.</p>
+                <p>Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur.</p>
+                <p>Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.</p>
+                <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi.</p>
+                <p>Sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga.</p>
+                <p>Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus.</p>
+                <p>Id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus.</p>
+                <p>Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae.</p>
+                <p>Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat.</p>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎬 Media Controls Test</h3>
+            <p>Try the <strong>Peace Sign</strong> gesture to toggle video play/pause:</p>
+            <div class="media-controls">
+                <video class="demo-video" width="400" height="225" controls>
+                    <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <br><br>
+                <button onclick="toggleVideo()">Toggle Video (Manual Test)</button>
+                <button onclick="volumeUp()">Volume Up (Manual Test)</button>
+                <button onclick="volumeDown()">Volume Down (Manual Test)</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🖱️ Click Test</h3>
+            <p>Try the <strong>Point</strong> gesture to click this button:</p>
+            <button id="testButton" onclick="showAlert()" style="padding: 15px 30px; font-size: 18px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Click Me! (Point Gesture)
+            </button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Debug Information</h3>
+            <p>Check the browser console (F12) for VibeCTRL debug messages.</p>
+            <p>Look for messages starting with 🚀, 📜, ✅, or ❌ to see if gestures are being detected and executed.</p>
+            <button onclick="checkExtensionStatus()">Check Extension Status</button>
+            <div id="extensionStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        function toggleVideo() {
+            const video = document.querySelector('.demo-video');
+            if (video.paused) {
+                video.play();
+                updateStatus('Video playing');
+            } else {
+                video.pause();
+                updateStatus('Video paused');
+            }
+        }
+
+        function volumeUp() {
+            const video = document.querySelector('.demo-video');
+            video.volume = Math.min(1, video.volume + 0.1);
+            updateStatus(`Volume: ${Math.round(video.volume * 100)}%`);
+        }
+
+        function volumeDown() {
+            const video = document.querySelector('.demo-video');
+            video.volume = Math.max(0, video.volume - 0.1);
+            updateStatus(`Volume: ${Math.round(video.volume * 100)}%`);
+        }
+
+        function showAlert() {
+            alert('Button clicked! The Point gesture is working correctly.');
+            updateStatus('Button clicked successfully!');
+        }
+
+        function updateStatus(message) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.background = '#28a745';
+            setTimeout(() => {
+                status.textContent = 'VibeCTRL Test Page Ready';
+                status.style.background = '#28a745';
+            }, 3000);
+        }
+
+        function checkExtensionStatus() {
+            const statusDiv = document.getElementById('extensionStatus');
+            
+            // Check if VibeCTRL overlay exists
+            const overlay = document.getElementById('__vibectrl_overlay__');
+            if (overlay) {
+                statusDiv.innerHTML = '<p style="color: green;">✅ VibeCTRL overlay detected!</p>';
+            } else {
+                statusDiv.innerHTML = '<p style="color: red;">❌ VibeCTRL overlay not found. Make sure the extension is enabled.</p>';
+            }
+
+            // Check for Chrome extension
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                statusDiv.innerHTML += '<p style="color: green;">✅ Chrome extension context detected</p>';
+            } else {
+                statusDiv.innerHTML += '<p style="color: orange;">⚠️ Not running in Chrome extension context</p>';
+            }
+        }
+
+        // Auto-check extension status on load
+        window.addEventListener('load', () => {
+            setTimeout(checkExtensionStatus, 1000);
+        });
+
+        // Listen for VibeCTRL events
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'VIBE_GESTURE_DETECTED') {
+                updateStatus(`Gesture detected: ${event.data.gesture}`);
+            }
+        });
+    </script>
+</body>
+</html>
+

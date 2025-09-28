@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "VibeCTRL Gestures",
+  "version": "0.1.0",
+  "description": "Train hand gestures and map them to actions. Use them on any site via content scripts.",
+  "action": {
+    "default_title": "VibeCTRL",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "scripting",
+    "offscreen",
+    "camera",
+    "microphone"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "toggle_overlay": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+G"
+      },
+      "description": "Toggle VibeCTRL overlay on current tab"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "static/*",
+        "assets/*",
+        "adapters/*",
+        "offscreen.html"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

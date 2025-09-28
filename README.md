@@ -60,6 +60,14 @@ npx serve -s build
 
 ## 📖 Usage Guide
 
+### Dashboard — Train & Map Gestures (Polished)
+- The Dashboard now focuses solely on model training and universal gesture mappings.
+- Demo content, slides, calibration, and toasts have been removed for a clean, professional layout.
+- Left: Camera & Training — use the camera to collect data, train, and start/stop inference.
+- Right: Gesture Mappings — configure actions per gesture; changes apply globally across pages and persist in localStorage.
+- Mappings update other pages in real time (within the SPA) and persist across reloads.
+
+
 ### 1. Initial Setup
 1. **Grant Camera Permissions** - Allow camera access when prompted
 2. **Calibrate Neutral Position** (Optional) - Click "Hold Neutral for 2s" for better accuracy

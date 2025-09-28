@@ -10,13 +10,13 @@ const Sidebar = ({ hidden = false }) => {
       <nav aria-label="Primary">
         <div className="nav-group" style={{ marginTop: 12 }}>
           <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/" end>
-            <Icon name="home" /> Landing
+            <Icon name="home" /> Landing Page
           </NavLink>
-          <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/dashboard">
-            <Icon name="camera" /> Dashboard
+          <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/dashboards">
+            <Icon name="camera" /> Dashboards
           </NavLink>
-          <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/settings">
-            <Icon name="settings" /> Settings
+          <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/help">
+            <Icon name="help" /> Help
           </NavLink>
         </div>
       </nav>

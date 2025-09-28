@@ -99,8 +99,8 @@ const Help = () => {
       </BrutalCard>
 
       <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-        <button className="demo-action" onClick={() => window.location.assign('/dashboard')}>
-          <Icon name="start" size={16} /> Back to Dashboard
+        <button className="demo-action" onClick={() => window.location.assign('/dashboards')}>
+          <Icon name="start" size={16} /> Back to Dashboards
         </button>
       </div>
     </div>

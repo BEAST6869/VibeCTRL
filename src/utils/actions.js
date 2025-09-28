@@ -1,3 +1,4 @@
+/* global chrome */
 /**
  * Browser action execution utilities for gesture mapping
  */
@@ -120,6 +121,15 @@ function storageKey(userId) {
  */
 const showToast = (message, type = 'info') => {
   try {
+    // Disable toast notifications on Landing and Dashboard pages
+    const path = window.location.pathname || '';
+    const isLandingPage = path === '/' || path === '/landing';
+    const isDashboard = /\/dashboard$/i.test(path) || path.includes('/dashboard');
+    if (isLandingPage || isDashboard) {
+      console.log(`🔕 Toast suppressed on ${isLandingPage ? 'Landing' : 'Dashboard'}: [${type.toUpperCase()}] ${message}`);
+      return;
+    }
+    
     const toast = document.createElement('div');
     toast.className = `gesture-toast toast-${type}`;
     toast.textContent = message;
@@ -475,6 +485,15 @@ export const executeMappedAction = (mapping) => {
   const { action, params = {} } = mapping;
   
   console.log(`🎬 Executing action: ${action}`, params);
+
+  // If running in extension popup, delegate to background to execute in active tab
+  try {
+    const isExtension = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id && window.location.protocol === 'chrome-extension:';
+    if (isExtension) {
+      chrome.runtime.sendMessage({ type: 'VIBE_EXECUTE', action, params });
+      return true;
+    }
+  } catch {}
   
   try {
     switch (action) {
@@ -562,7 +581,7 @@ export const getDefaultMapping = (labels) => {
       case 'open_hand':
       case 'open':
       case 'palm':
-        base[label] = { action: ACTION_TYPES.SCROLL_DOWN, params: { pixels: 300 } };
+        base[label] = { action: ACTION_TYPES.SCROLL_DOWN, params: { pixels: 300, distance: 300 } };
         break;
       case 'fist':
       case 'closed':
@@ -579,7 +598,7 @@ export const getDefaultMapping = (labels) => {
         break;
       case 'peace':
       case 'victory':
-        base[label] = { action: ACTION_TYPES.TAB_NEXT, params: {} };
+        base[label] = { action: ACTION_TYPES.TOGGLE_VIDEO, params: {} };
         break;
       case 'point':
       case 'finger':
@@ -598,11 +617,41 @@ export const getDefaultMapping = (labels) => {
  * @param {Object} mappings - Mapping configuration object
  * @param {string} [userId]
  */
-export const saveMappings = (mappings, userId = getOrCreateUserId()) => {
+export const saveMappings = async (mappings, userId = getOrCreateUserId()) => {
   try {
     const key = storageKey(userId);
     localStorage.setItem(key, JSON.stringify(mappings));
     console.log(`💾 Gesture mappings saved to localStorage for user ${userId}`);
+    
+    // Save to chrome.storage.sync for global extension sync
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.sync) {
+        await chrome.storage.sync.set({ 
+          gesture_mappings: mappings,
+          gesture_mappings_user: userId,
+          gesture_mappings_updated: Date.now()
+        });
+        console.log('🌐 Gesture mappings synced globally via chrome.storage.sync');
+      }
+    } catch (syncError) {
+      console.warn('⚠️ Failed to sync mappings globally:', syncError);
+    }
+    
+    // Mirror into chrome.storage.local for content scripts
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        const extKey = `vibe_mappings_${userId}`;
+        chrome.storage.local.set({ [extKey]: mappings }, () => {});
+        chrome.storage.local.set({ gesture_mappings: mappings }, () => {});
+      }
+    } catch {}
+    
+    // Notify listeners in the same document (SPA) that mappings updated
+    try {
+      window.dispatchEvent(new CustomEvent('vibe:mappings-updated', { detail: { userId, mappings } }));
+      // Broadcast to extension tabs as well
+      try { chrome?.runtime?.sendMessage?.({ type: 'vibe:mappings-updated', mappings, userId }); } catch {}
+    } catch {}
     return true;
   } catch (error) {
     console.error('❌ Failed to save mappings:', error);
@@ -612,14 +661,40 @@ export const saveMappings = (mappings, userId = getOrCreateUserId()) => {
 };
 
 /**
+ * Load gesture mappings from chrome.storage.sync (global extension sync)
+ * @returns {Promise<Object>} Loaded mappings or empty object
+ */
+export const loadGlobalMappings = async () => {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.sync) {
+      const result = await chrome.storage.sync.get(['gesture_mappings', 'gesture_mappings_user', 'gesture_mappings_updated']);
+      if (result.gesture_mappings) {
+        console.log('🌐 Loaded global gesture mappings from chrome.storage.sync');
+        return result.gesture_mappings;
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to load global mappings:', error);
+  }
+  return {};
+};
+
+/**
  * Load gesture mappings from localStorage for a user
  * @param {Array} labels - Array of gesture labels for default fallback
  * @param {string} [userId]
  * @returns {Object} Loaded or default mapping configuration
  */
-export const loadMappings = (labels = [], userId = getOrCreateUserId()) => {
+export const loadMappings = async (labels = [], userId = getOrCreateUserId()) => {
   try {
-    // Preferred per-user key
+    // First try to load from global chrome.storage.sync
+    const globalMappings = await loadGlobalMappings();
+    if (globalMappings && Object.keys(globalMappings).length > 0) {
+      console.log('📥 Using global gesture mappings from chrome.storage.sync');
+      return normalizeMappings(globalMappings);
+    }
+    
+    // Fallback to localStorage per-user key
     const saved = localStorage.getItem(storageKey(userId));
     if (saved) {
       const parsed = JSON.parse(saved);

@@ -23,7 +23,7 @@ import MappingEditor from './MappingEditor';
  * center point for gesture normalization and relative positioning calculations.
  */
 
-const GestureController = () => {
+const GestureController = ({ mode = 'full', onRegisterControls = null, onStatusChange = null, showOverlays = true, enableCalibration = true, showMappingEditor = true }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const handModel = useRef(null);
@@ -37,15 +37,12 @@ const GestureController = () => {
   const lastInferenceTimeRef = useRef(0);
   const centroidHistoryRef = useRef([]);
   const lastSwipeTimeRef = useRef(0);
-<<<<<<< Updated upstream
-  // Anti-spam and cooldown tracking
+  // Anti-spam and cooldown tracking (per-gesture) and anti-hold flags
   const lastTriggeredRef = useRef({}); // per-gesture last trigger timestamp
   const recentActionsRef = useRef([]); // array of { label, timestamp }
-=======
   // Anti-hold: require label release before firing same gesture again
   const lastFiredLabelRef = useRef(null);
   const hasResetSinceLastFireRef = useRef(true);
->>>>>>> Stashed changes
   
   // File input ref for importing TF.js models (model.json + weights)
   const importInputRef = useRef(null);
@@ -63,6 +60,7 @@ const GestureController = () => {
   const [currentPrediction, setCurrentPrediction] = useState(null);
   const [lastTriggeredAction, setLastTriggeredAction] = useState(null);
 const [gestureMappings, setGestureMappings] = useState({});
+const [hudFeedback, setHudFeedback] = useState(null);
   const [userId, setUserId] = useState(null);
   const [swipeAnimation, setSwipeAnimation] = useState(null);
   
@@ -181,9 +179,12 @@ const [gestureMappings, setGestureMappings] = useState({});
 
         // Draw landmarks for each detected hand
         predictions.forEach((prediction, handIndex) => {
-          const landmarks = prediction.landmarks;
+          const landmarks = prediction && Array.isArray(prediction.landmarks) ? prediction.landmarks : null;
+          if (!landmarks || !Array.isArray(landmarks) || landmarks.length < 2) {
+            return; // skip invalid frame without logging errors
+          }
           
-          // Extract features and centroid
+          // Extract features and centroid (robustly)
           const features = flattenLandmarks(landmarks);
           const centroid = computeCentroid(landmarks);
           
@@ -289,6 +290,13 @@ const [gestureMappings, setGestureMappings] = useState({});
       isRecordingRef.current = null; // Keep ref in sync
     }
   };
+
+  // Expose recording controls to parent page if requested (non-invasive, UI-agnostic)
+  useEffect(() => {
+    if (typeof onRegisterControls === 'function') {
+      onRegisterControls({ startRecording, stopRecording });
+    }
+  }, [onRegisterControls]);
 
   // Dataset management functions
   const clearLabelData = (label) => {
@@ -448,10 +456,10 @@ const [gestureMappings, setGestureMappings] = useState({});
     return null;
   };
 
-<<<<<<< Updated upstream
   const triggerSwipeAction = (swipeDirection) => {
     const currentTime = Date.now();
-    // Per-gesture cooldown check for swipes as well
+
+    // Per-gesture cooldown for swipes as well
     const lastForGesture = lastTriggeredRef.current[swipeDirection] || 0;
     if (currentTime - lastForGesture < cooldownMs) {
       console.log(`⏱️ Swipe cooldown active for ${swipeDirection}, skipping.`);
@@ -462,54 +470,45 @@ const [gestureMappings, setGestureMappings] = useState({});
     if (recentActionsRef.current.length > 30) recentActionsRef.current.shift();
 
     console.log(`🎯 SWIPE ACTION TRIGGERED: ${swipeDirection}`);
-    
+
     // Execute asynchronously to avoid blocking UI/inference loop
     setTimeout(() => {
       const mapping = gestureMappings[swipeDirection];
       if (mapping) {
-        console.log(`🎨 Executing mapped swipe action:`, mapping);
+        console.log('🎨 Executing mapped swipe action:', mapping);
+        if (!canTrigger(mapping)) {
+          console.log('⏱️ Cooldown/anti-spam: swipe suppressed');
+          return;
+        }
         const success = executeMappedAction(mapping);
         if (success) {
-          console.log(`✅ Swipe action executed successfully`);
+          console.log('✅ Swipe action executed successfully');
         } else {
-          console.log(`❌ Swipe action execution failed`);
-=======
-const triggerSwipeAction = (swipeDirection) => {
-    console.log(`🎯 SWIPE ACTION TRIGGERED: ${swipeDirection}`);
-    
-    // Create a synthetic action for the mapping system
-    const mapping = gestureMappings[swipeDirection];
-    if (mapping) {
-      console.log(`🎨 Executing mapped swipe action:`, mapping);
-      if (!canTrigger(mapping)) {
-        console.log('⏱️ Cooldown/anti-spam: swipe suppressed');
-        return false;
-      }
-      const success = executeMappedAction(mapping);
-      if (success) {
-        console.log(`✅ Swipe action executed successfully`);
-      } else {
-        console.log(`❌ Swipe action execution failed`);
-      }
-      return success;
-    } else {
-      // Default swipe actions if no mapping exists
-      const defaultMapping = {
-        action: swipeDirection === 'swipe_left' ? 'key_press' : 'key_press',
-        params: {
-          key: swipeDirection === 'swipe_left' ? 'ArrowLeft' : 'ArrowRight'
->>>>>>> Stashed changes
+          console.log('❌ Swipe action execution failed');
         }
       } else {
         // Default swipe actions if no mapping exists
         const defaultMapping = {
-          action: swipeDirection === 'swipe_left' ? 'key_press' : 'key_press',
+          action: 'key_press',
           params: {
             key: swipeDirection === 'swipe_left' ? 'ArrowLeft' : 'ArrowRight'
           }
         };
-        console.log(`🎨 Using default swipe action:`, defaultMapping);
+        console.log('🎨 Using default swipe action:', defaultMapping);
         executeMappedAction(defaultMapping);
+      }
+
+      // Cookbook page hooks for flip controls
+      try {
+        if (window.cookbookActions) {
+          if (swipeDirection === 'swipe_left') {
+            window.cookbookActions.nextPage && window.cookbookActions.nextPage();
+          } else if (swipeDirection === 'swipe_right') {
+            window.cookbookActions.prevPage && window.cookbookActions.prevPage();
+          }
+        }
+      } catch (hookErr) {
+        console.warn('Page hook error:', hookErr);
       }
     }, 0);
 
@@ -518,7 +517,12 @@ const triggerSwipeAction = (swipeDirection) => {
 
 const triggerAction = (actionLabel, confidence) => {
     const currentTime = Date.now();
-<<<<<<< Updated upstream
+
+    // High-level throttle between any actions (user adjustable)
+    if (currentTime - lastActionTimeRef.current < cooldownMs) {
+      console.log(`⏱️ Action cooldown active, skipping ${actionLabel}`);
+      return false;
+    }
 
     // Per-gesture cooldown
     const lastForGesture = lastTriggeredRef.current[actionLabel] || 0;
@@ -530,56 +534,48 @@ const triggerAction = (actionLabel, confidence) => {
     recentActionsRef.current.push({ label: actionLabel, timestamp: currentTime });
     if (recentActionsRef.current.length > 30) recentActionsRef.current.shift();
 
+    const mapping = gestureMappings[actionLabel];
     console.log(`🎯 ACTION TRIGGERED: ${actionLabel} (${(confidence * 100).toFixed(1)}% confidence)`);
-    setLastTriggeredAction({ label: actionLabel, confidence, timestamp: currentTime });
+    setLastTriggeredAction({ label: actionLabel, confidence, timestamp: currentTime, action: mapping?.action });
+    lastActionTimeRef.current = currentTime;
 
     // Show initial gesture animation immediately (optimistic)
-=======
-    
-    // High-level throttle between any actions (user adjustable)
-    if (currentTime - lastActionTimeRef.current < cooldownMs) {
-      console.log(`⏱️ Action cooldown active, skipping ${actionLabel}`);
-      return false;
-    }
-    
-    const mapping = gestureMappings[actionLabel];
-    if (!mapping) {
-      console.log(`⚠️ No mapping found for gesture: ${actionLabel}`);
-      showGestureAnimation(false, actionLabel);
-      return false;
-    }
-
-    // Per-mapping cooldown and anti-repetition
-    if (!canTrigger(mapping)) {
-      console.log(`⏱️ Mapping cooldown/anti-spam active for ${actionLabel}`);
-      return false;
-    }
-
-    console.log(`🎯 ACTION TRIGGERED: ${actionLabel} (${(confidence * 100).toFixed(1)}% confidence)`);
-    setLastTriggeredAction({ label: actionLabel, confidence, timestamp: currentTime, action: mapping.action });
-    lastActionTimeRef.current = currentTime;
-    
-    // Show gesture animation
->>>>>>> Stashed changes
     showGestureAnimation(true, actionLabel);
+    
+    // Show HUD feedback
+    const actionIcons = {
+      'toggle_video': '🎬',
+      'scroll_up': '⬆️',
+      'scroll_down': '⬇️',
+      'volume_up': '🔊',
+      'volume_down': '🔉',
+      'key_press': '⌨️',
+      'click_selector': '👆'
+    };
+    const icon = actionIcons[mapping?.action] || '✋';
+    showHudFeedback(icon, `${actionLabel} → ${mapping?.action || 'action'}`);
 
     // Clear action indicator after 2 seconds
     setTimeout(() => {
       setLastTriggeredAction(null);
     }, 2000);
-<<<<<<< Updated upstream
 
     // Execute mapped action asynchronously to avoid blocking UI/inference loop
     setTimeout(() => {
-      const mapping = gestureMappings[actionLabel];
-      if (mapping) {
-        console.log(`🎨 Executing mapped action for ${actionLabel}:`, mapping);
-        const success = executeMappedAction(mapping);
+      const execMapping = gestureMappings[actionLabel];
+      if (execMapping) {
+        console.log('🎨 Executing mapped action for', actionLabel, ':', execMapping);
+        if (!canTrigger(execMapping)) {
+          console.log(`⏱️ Mapping cooldown/anti-spam active for ${actionLabel}`);
+          showGestureAnimation(false, actionLabel);
+          return;
+        }
+        const success = executeMappedAction(execMapping);
 
         // Voice feedback
         let actionDescription = actionLabel;
-        if (mapping.action === 'key_press' && mapping.params?.key) {
-          actionDescription = `${actionLabel} - ${mapping.params.key}`;
+        if (execMapping.action === 'key_press' && execMapping.params?.key) {
+          actionDescription = `${actionLabel} - ${execMapping.params.key}`;
         }
         speakAction(actionDescription);
 
@@ -591,45 +587,78 @@ const triggerAction = (actionLabel, confidence) => {
           window.demoAreaActions.logAction(`${actionLabel} (${(confidence * 100).toFixed(1)}%)`);
         }
 
+        // Page-specific fallbacks/hooks (non-breaking):
+        try {
+          // Landing page media controls
+          if (window.landingMediaActions) {
+            if (actionLabel === 'fist') {
+              window.landingMediaActions.toggleVideo && window.landingMediaActions.toggleVideo();
+            } else if (actionLabel === 'thumbs_up') {
+              window.landingMediaActions.volumeUp && window.landingMediaActions.volumeUp();
+            } else if (actionLabel === 'thumbs_down') {
+              window.landingMediaActions.volumeDown && window.landingMediaActions.volumeDown();
+            }
+          }
+          // Training & Demo volume control (thumbs gestures)
+          if (window.trainingDemoActions) {
+            if (actionLabel === 'thumbs_up') {
+              window.trainingDemoActions.volumeUp && window.trainingDemoActions.volumeUp();
+            } else if (actionLabel === 'thumbs_down') {
+              window.trainingDemoActions.volumeDown && window.trainingDemoActions.volumeDown();
+            }
+          }
+          // Cookbook scroll control (open_hand/fist as defaults)
+          if (window.cookbookActions) {
+            if (actionLabel === 'open_hand') {
+              window.cookbookActions.scrollDown && window.cookbookActions.scrollDown();
+            } else if (actionLabel === 'fist') {
+              window.cookbookActions.scrollUp && window.cookbookActions.scrollUp();
+            }
+          }
+        } catch (hookErr) {
+          console.warn('Page hook error:', hookErr);
+        }
+
         if (success) {
-          console.log(`✅ Action executed successfully`);
+          console.log('✅ Action executed successfully');
         } else {
-          console.log(`❌ Action execution failed`);
+          console.log('❌ Action execution failed');
         }
       } else {
         console.log(`⚠️ No mapping found for gesture: ${actionLabel}`);
         showGestureAnimation(false, actionLabel);
+        // Even without a mapping, try page hooks for defaults
+        try {
+          if (window.landingMediaActions) {
+            if (actionLabel === 'fist') {
+              window.landingMediaActions.toggleVideo && window.landingMediaActions.toggleVideo();
+            } else if (actionLabel === 'thumbs_up') {
+              window.landingMediaActions.volumeUp && window.landingMediaActions.volumeUp();
+            } else if (actionLabel === 'thumbs_down') {
+              window.landingMediaActions.volumeDown && window.landingMediaActions.volumeDown();
+            }
+          }
+          if (window.trainingDemoActions) {
+            if (actionLabel === 'thumbs_up') {
+              window.trainingDemoActions.volumeUp && window.trainingDemoActions.volumeUp();
+            } else if (actionLabel === 'thumbs_down') {
+              window.trainingDemoActions.volumeDown && window.trainingDemoActions.volumeDown();
+            }
+          }
+          if (window.cookbookActions) {
+            if (actionLabel === 'open_hand') {
+              window.cookbookActions.scrollDown && window.cookbookActions.scrollDown();
+            } else if (actionLabel === 'fist') {
+              window.cookbookActions.scrollUp && window.cookbookActions.scrollUp();
+            }
+          }
+        } catch (hookErr) {
+          console.warn('Page hook error:', hookErr);
+        }
       }
     }, 0);
 
     return true; // scheduled
-=======
-    
-    console.log(`🎨 Executing mapped action for ${actionLabel}:`, mapping);
-    const success = executeMappedAction(mapping);
-    
-    // Voice feedback
-    let actionDescription = actionLabel;
-    if (mapping.action === 'key_press' && mapping.params?.key) {
-      actionDescription = `${actionLabel} - ${mapping.params.key}`;
-    }
-    speakAction(actionDescription);
-    
-    // Update animation based on success
-    showGestureAnimation(success, actionLabel);
-    
-    // Log to demo area if available
-    if (window.demoAreaActions?.logAction) {
-      window.demoAreaActions.logAction(`${actionLabel} (${(confidence * 100).toFixed(1)}%)`);
-    }
-    
-    if (success) {
-      console.log(`✅ Action executed successfully`);
-    } else {
-      console.log(`❌ Action execution failed`);
-    }
-    return success;
->>>>>>> Stashed changes
   };
 
   // Handle mapping changes from MappingEditor
@@ -655,6 +684,14 @@ const triggerAction = (actionLabel, confidence) => {
     } catch (error) {
       console.warn('⚠️ Voice feedback error:', error);
     }
+  };
+
+  // HUD feedback function
+  const showHudFeedback = (icon, message, duration = 2000) => {
+    setHudFeedback({ icon, message, timestamp: Date.now() });
+    setTimeout(() => {
+      setHudFeedback(null);
+    }, duration);
   };
   
   // Calibration functions
@@ -780,11 +817,16 @@ const triggerAction = (actionLabel, confidence) => {
       if (hands.length === 0) {
         // No hands detected, clear prediction
         setCurrentPrediction(null);
+        try { if (typeof onStatusChange === 'function') onStatusChange(null); } catch {}
         return;
       }
 
       // Use first detected hand
-      const landmarks = hands[0].landmarks;
+      const landmarks = hands[0] && Array.isArray(hands[0].landmarks) ? hands[0].landmarks : null;
+      if (!landmarks || !Array.isArray(landmarks) || landmarks.length < 2) {
+        // Invalid or missing landmarks; skip this tick quietly
+        return;
+      }
       
       // Extract features and centroid
       const features = flattenLandmarks(landmarks);
@@ -841,6 +883,7 @@ const triggerAction = (actionLabel, confidence) => {
       };
       
       setCurrentPrediction(predictionInfo);
+      try { if (typeof onStatusChange === 'function') onStatusChange(predictionInfo); } catch {}
       
       // Check for majority vote and action triggering
       const majorityVote = getMajorityVote(predictionWindowRef.current);
@@ -866,6 +909,19 @@ const triggerAction = (actionLabel, confidence) => {
             if (ok) {
               lastFiredLabelRef.current = majorityLabel;
               hasResetSinceLastFireRef.current = false;
+              
+              // Broadcast gesture to extension for external sites
+              try {
+                if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+                  chrome.runtime.sendMessage({
+                    type: 'VIBE_GESTURE_DETECTED',
+                    gesture: majorityLabel,
+                    confidence: maxProbability
+                  });
+                }
+              } catch (extError) {
+                // Extension not available, ignore
+              }
             }
           } else {
             console.log(`🧯 Hold suppression: ${majorityLabel} not re-fired until release`);
@@ -936,6 +992,8 @@ useEffect(() => {
     setUserId(id);
     const loaded = loadMappings(modelMetadata.indexToLabel, id);
     setGestureMappings(loaded);
+    // Broadcast labels so external UIs (Dashboard) can update MappingEditor labels
+    try { window.dispatchEvent(new CustomEvent('vibe:model-metadata', { detail: { labels: modelMetadata.indexToLabel } })); } catch {}
   }
 }, [modelMetadata]);
 
@@ -949,6 +1007,28 @@ useEffect(() => {
     stopInference();
   }
 }, [trainedModel, modelMetadata, isRecording]);
+
+// Listen for universal mapping updates and storage changes to refresh mappings in real-time
+useEffect(() => {
+  const reload = () => {
+    try {
+      if (modelMetadata?.indexToLabel && userId) {
+        const fresh = loadMappings(modelMetadata.indexToLabel, userId);
+        setGestureMappings(fresh);
+      }
+    } catch {}
+  };
+  const onCustom = () => reload();
+  const onStorage = (e) => {
+    if (e && e.key && userId && e.key.includes(`vibe_user_mappings_${userId}`)) reload();
+  };
+  window.addEventListener('vibe:mappings-updated', onCustom);
+  window.addEventListener('storage', onStorage);
+  return () => {
+    window.removeEventListener('vibe:mappings-updated', onCustom);
+    window.removeEventListener('storage', onStorage);
+  };
+}, [modelMetadata, userId]);
 
   // Training and model management functions
   const handleTrainModel = async () => {
@@ -1097,6 +1177,7 @@ useEffect(() => {
         const result = await loadModel();
         setTrainedModel(result.model);
         setModelMetadata(result.metadata);
+        try { window.dispatchEvent(new CustomEvent('vibe:model-metadata', { detail: { labels: result.metadata.indexToLabel } })); } catch {}
         console.log('✅ Existing model loaded on startup');
       } catch (error) {
         // Fallback: attempt direct IndexedDB model load
@@ -1187,7 +1268,7 @@ useEffect(() => {
             🔴 Recording: {isRecording}
           </div>
         )}
-        {currentPrediction && isInferenceActive && (
+        {showOverlays && currentPrediction && isInferenceActive && (
           <div className="prediction-overlay">
             <div className="prediction-label">
               {currentPrediction.label}
@@ -1197,12 +1278,36 @@ useEffect(() => {
             </div>
           </div>
         )}
-{lastTriggeredAction && (
+        {showOverlays && lastTriggeredAction && (
           <div className="action-indicator">
             ⚡ {lastTriggeredAction.label} → {lastTriggeredAction.action || '...'} @ {new Date(lastTriggeredAction.timestamp).toLocaleTimeString()}
           </div>
         )}
-        {swipeAnimation && (
+        {showOverlays && hudFeedback && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(0,0,0,0.9)',
+            color: 'white',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            zIndex: 2000,
+            pointerEvents: 'none',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            border: '2px solid #10b981',
+            animation: 'fadeInOut 2s ease-in-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '24px' }}>{hudFeedback.icon}</span>
+              <span>{hudFeedback.message}</span>
+            </div>
+          </div>
+        )}
+        {showOverlays && swipeAnimation && (
           <div className="swipe-animation">
             <div className={`swipe-arrow ${swipeAnimation.direction}`}>
               {swipeAnimation.direction === 'swipe_left' ? '←' : '→'}
@@ -1213,7 +1318,7 @@ useEffect(() => {
           </div>
         )}
         
-        {gestureAnimation && (
+        {showOverlays && gestureAnimation && (
           <div className="gesture-animation">
             <div className={`gesture-icon ${gestureAnimation.success ? 'success' : 'failure'}`}>
               {gestureAnimation.success ? '✓' : '✗'}
@@ -1225,7 +1330,7 @@ useEffect(() => {
         )}
         
         {/* Confidence Meter */}
-        {currentPrediction && isInferenceActive && (
+        {showOverlays && currentPrediction && isInferenceActive && (
           <div className="confidence-meter">
             <div className="confidence-label">Confidence</div>
             <div className="confidence-bar">
@@ -1245,7 +1350,7 @@ useEffect(() => {
         )}
         
         {/* Calibration Progress */}
-        {isCalibrating && (
+        {showOverlays && enableCalibration && isCalibrating && (
           <div className="calibration-overlay">
             <div className="calibration-content">
               <div className="calibration-icon">🤚</div>
@@ -1263,384 +1368,392 @@ useEffect(() => {
           </div>
         )}
       </div>
-      
-      <div className="data-capture-section">
-        <h3>Gesture Data Collection</h3>
-        <p className="capture-hint">
-          Hold button for 2–5 seconds while performing the gesture at various angles
-        </p>
-        
-        <div className="recording-controls">
-          {DEFAULT_LABELS.map(label => (
-            <div key={label} className="label-control">
-              <button
-                className={`record-button ${isRecording === label ? 'recording' : ''}`}
-                onMouseDown={() => startRecording(label)}
-                onMouseUp={stopRecording}
-                onMouseLeave={stopRecording}
-                onTouchStart={() => startRecording(label)}
-                onTouchEnd={stopRecording}
-                onTouchCancel={stopRecording}
-                onContextMenu={handleContextMenu}
-                disabled={!handModel.current}
-              >
-                📹 {label}
-              </button>
-              <div className="label-stats">
-                <span className="count">{datasetCounts[label] || 0} samples</span>
-                <button 
-                  className="clear-button"
-                  onClick={() => clearLabelData(label)}
-                  disabled={!datasetCounts[label]}
-                >
-                  🗑️
-                </button>
-              </div>
+
+      {mode === 'full' && (
+        <>
+          <div className="data-capture-section">
+            <h3>Gesture Data Collection</h3>
+            <p className="capture-hint">
+              Hold button for 2–5 seconds while performing the gesture at various angles
+            </p>
+            
+            <div className="recording-controls">
+              {DEFAULT_LABELS.map(label => (
+                <div key={label} className="label-control">
+                  <button
+                    className={`record-button ${isRecording === label ? 'recording' : ''}`}
+                    onMouseDown={() => startRecording(label)}
+                    onMouseUp={stopRecording}
+                    onMouseLeave={stopRecording}
+                    onTouchStart={() => startRecording(label)}
+                    onTouchEnd={stopRecording}
+                    onTouchCancel={stopRecording}
+                    onContextMenu={handleContextMenu}
+                    disabled={!handModel.current}
+                  >
+                    📹 {label}
+                  </button>
+                  <div className="label-stats">
+                    <span className="count">{datasetCounts[label] || 0} samples</span>
+                    <button 
+                      className="clear-button"
+                      onClick={() => clearLabelData(label)}
+                      disabled={!datasetCounts[label]}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        
-        <div className="dataset-summary">
-          <div className="summary-counts">
-            {DEFAULT_LABELS.map((label, index) => (
-              <span key={label} className="count-display" title={`${datasetCounts[label] || 0} samples collected for ${label}`}>
-                <span className="label-name">{label}</span>: 
-                <span className={`count-number ${(datasetCounts[label] || 0) >= 10 ? 'sufficient' : 'insufficient'}`}>
-                  {datasetCounts[label] || 0}
-                </span>
-                {index < DEFAULT_LABELS.length - 1 && ' | '}
-              </span>
-            ))}
+            
+            <div className="dataset-summary">
+              <div className="summary-counts">
+                {DEFAULT_LABELS.map((label, index) => (
+                  <span key={label} className="count-display" title={`${datasetCounts[label] || 0} samples collected for ${label}`}>
+                    <span className="label-name">{label}</span>: 
+                    <span className={`count-number ${(datasetCounts[label] || 0) >= 10 ? 'sufficient' : 'insufficient'}`}>
+                      {datasetCounts[label] || 0}
+                    </span>
+                    {index < DEFAULT_LABELS.length - 1 && ' | '}
+                  </span>
+                ))}
+              </div>
+              
+              <button 
+                className="export-button"
+                onClick={exportDataset}
+                disabled={Object.values(datasetCounts).every(count => count === 0)}
+              >
+                💾 Export Dataset
+              </button>
+              
+              <button 
+                className="debug-button"
+                onClick={debugCurrentState}
+                style={{ marginLeft: '10px', padding: '10px 15px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                🔍 Debug
+              </button>
+            </div>
           </div>
           
-          <button 
-            className="export-button"
-            onClick={exportDataset}
-            disabled={Object.values(datasetCounts).every(count => count === 0)}
-          >
-            💾 Export Dataset
-          </button>
-          
-          <button 
-            className="debug-button"
-            onClick={debugCurrentState}
-            style={{ marginLeft: '10px', padding: '10px 15px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-          >
-            🔍 Debug
-          </button>
-        </div>
-        </div>
-        
-        {/* UI Controls Section */}
-        <div className="ui-controls-section">
-          <h4>🎛️ Controls & Settings</h4>
-          
-          <div className="controls-grid">
-            {/* Calibration */}
-            <div className="control-group">
-              <label className="control-label" title="Calibrate a neutral hand position baseline for better accuracy">
-                🤚 Neutral Calibration
-              </label>
-              <button 
-                className="calibration-button"
-                onClick={startCalibration}
-                disabled={isCalibrating || !handModel.current}
-              >
-                {isCalibrating ? 'Calibrating...' : 'Hold Neutral for 2s'}
-              </button>
-              {neutralBaseline && (
-                <span className="calibration-status">✅ Calibrated</span>
+          {/* UI Controls Section */}
+          <div className="ui-controls-section">
+            <h4>🎛️ Controls & Settings</h4>
+            
+            <div className="controls-grid">
+              {/* Calibration (optional) */}
+              {enableCalibration && (
+                <div className="control-group">
+                  <label className="control-label" title="Calibrate a neutral hand position baseline for better accuracy">
+                    🤚 Neutral Calibration
+                  </label>
+                  <button 
+                    className="calibration-button"
+                    onClick={startCalibration}
+                    disabled={isCalibrating || !handModel.current}
+                  >
+                    {isCalibrating ? 'Calibrating...' : 'Hold Neutral for 2s'}
+                  </button>
+                  {neutralBaseline && (
+                    <span className="calibration-status">✅ Calibrated</span>
+                  )}
+                </div>
               )}
-            </div>
-            
-            {/* Sensitivity Controls */}
-            <div className="control-group">
-              <label className="control-label" title="Minimum confidence required to trigger actions (higher = more precise)">
-                🎯 Confidence Threshold: {Math.round(confidenceThreshold * 100)}%
-              </label>
-              <input 
-                type="range"
-                min="0.3"
-                max="0.95"
-                step="0.05"
-                value={confidenceThreshold}
-                onChange={(e) => setConfidenceThreshold(parseFloat(e.target.value))}
-                className="sensitivity-slider"
-              />
-              <div className="slider-labels">
-                <span>Sensitive</span>
-                <span>Precise</span>
+              
+              {/* Sensitivity Controls */}
+              <div className="control-group">
+                <label className="control-label" title="Minimum confidence required to trigger actions (higher = more precise)">
+                  🎯 Confidence Threshold: {Math.round(confidenceThreshold * 100)}%
+                </label>
+                <input 
+                  type="range"
+                  min="0.3"
+                  max="0.95"
+                  step="0.05"
+                  value={confidenceThreshold}
+                  onChange={(e) => setConfidenceThreshold(parseFloat(e.target.value))}
+                  className="sensitivity-slider"
+                />
+                <div className="slider-labels">
+                  <span>Sensitive</span>
+                  <span>Precise</span>
+                </div>
+              </div>
+              
+              <div className="control-group">
+                <label className="control-label" title="Time between gesture recognitions (higher = less rapid firing)">
+                  ⏱️ Cooldown: {cooldownMs}ms
+                </label>
+                <input 
+                  type="range"
+                  min="500"
+                  max="3000"
+                  step="100"
+                  value={cooldownMs}
+                  onChange={(e) => setCooldownMs(parseInt(e.target.value))}
+                  className="sensitivity-slider"
+                />
+                <div className="slider-labels">
+                  <span>Fast</span>
+                  <span>Slow</span>
+                </div>
+              </div>
+              
+              {/* Voice Feedback */}
+              <div className="control-group">
+                <label className="control-label" title="Speak action confirmations aloud">
+                  🔊 Voice Feedback
+                </label>
+                <button 
+                  className={`voice-toggle ${voiceFeedbackEnabled ? 'enabled' : 'disabled'}`}
+                  onClick={() => {
+                    setVoiceFeedbackEnabled(!voiceFeedbackEnabled);
+                    if (!voiceFeedbackEnabled) {
+                      speakAction('Voice feedback enabled');
+                    }
+                  }}
+                  disabled={!window.speechSynthesis}
+                >
+                  {voiceFeedbackEnabled ? '🔊 ON' : '🔇 OFF'}
+                </button>
+                {!window.speechSynthesis && (
+                  <span className="feature-unavailable">Not supported</span>
+                )}
               </div>
             </div>
+          </div>
+          
+          <div className="training-controls">
+            <h3>Model Training</h3>
+            <p className="training-hint">
+              Train a gesture recognition model using your captured data
+            </p>
             
-            <div className="control-group">
-              <label className="control-label" title="Time between gesture recognitions (higher = less rapid firing)">
-                ⏱️ Cooldown: {cooldownMs}ms
-              </label>
-              <input 
-                type="range"
-                min="500"
-                max="3000"
-                step="100"
-                value={cooldownMs}
-                onChange={(e) => setCooldownMs(parseInt(e.target.value))}
-                className="sensitivity-slider"
-              />
-              <div className="slider-labels">
-                <span>Fast</span>
-                <span>Slow</span>
+            {trainingProgress && (
+              <div className="training-progress">
+                {trainingProgress.phase === 'validating' && (
+                  <div className="progress-item">
+                    ⚙️ Validating dataset...
+                  </div>
+                )}
+                
+                {trainingProgress.phase === 'training' && (
+                  <div className="progress-item">
+                    🏋️ Training in progress...
+                    {trainingProgress.epoch && (
+                      <div className="epoch-progress">
+                        Epoch {trainingProgress.epoch}/{trainingProgress.totalEpochs}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {trainingProgress.epoch && trainingProgress.loss && (
+                  <div className="training-stats">
+                    <div className="stat">
+                      Loss: {trainingProgress.loss.toFixed(4)}
+                    </div>
+                    <div className="stat">
+                      Accuracy: {((trainingProgress.accuracy || 0) * 100).toFixed(1)}%
+                    </div>
+                    {trainingProgress.valLoss && (
+                      <div className="stat">
+                        Val Loss: {trainingProgress.valLoss.toFixed(4)}
+                      </div>
+                    )}
+                    {trainingProgress.valAccuracy && (
+                      <div className="stat">
+                        Val Accuracy: {(trainingProgress.valAccuracy * 100).toFixed(1)}%
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {trainingProgress.phase === 'saving' && (
+                  <div className="progress-item">
+                    💾 Saving model to IndexedDB...
+                  </div>
+                )}
+                
+                {trainingProgress.phase === 'completed' && (
+                  <div className="progress-item success">
+                    ✅ Training completed successfully!
+                  </div>
+                )}
+                
+                {trainingProgress.phase === 'error' && (
+                  <div className="progress-item error">
+                    ❌ Training failed: {trainingProgress.error}
+                  </div>
+                )}
               </div>
-            </div>
+            )}
             
-            {/* Voice Feedback */}
-            <div className="control-group">
-              <label className="control-label" title="Speak action confirmations aloud">
-                🔊 Voice Feedback
-              </label>
+            <div className="training-controls">
               <button 
-                className={`voice-toggle ${voiceFeedbackEnabled ? 'enabled' : 'disabled'}`}
-                onClick={() => {
-                  setVoiceFeedbackEnabled(!voiceFeedbackEnabled);
-                  if (!voiceFeedbackEnabled) {
-                    speakAction('Voice feedback enabled');
+                className="train-button"
+                onClick={handleTrainModel}
+                disabled={isTraining || Object.values(datasetCounts).every(count => count === 0)}
+              >
+                {isTraining ? '⚙️ Training...' : '🏋️ Train Model'}
+              </button>
+              
+              <button 
+                className="load-button"
+                onClick={handleLoadModel}
+                disabled={isTraining}
+              >
+                📥 Load Model
+              </button>
+              
+              <button 
+                className="test-button"
+                onClick={handleTestModel}
+                disabled={!trainedModel || isTraining}
+              >
+                🧪 Test Model
+              </button>
+              
+              <button 
+                className="delete-button"
+                onClick={handleDeleteModel}
+                disabled={!trainedModel || isTraining}
+              >
+                🗑️ Delete Model
+              </button>
+
+              <button 
+                className="export-model-button"
+                onClick={async () => {
+                  try {
+                    if (!trainedModel) {
+                      alert('Train or load a model first.');
+                      return;
+                    }
+                    await trainedModel.save('downloads://gesture-model');
+                    console.log('💾 Model exported via browser download');
+                  } catch (err) {
+                    console.error('❌ Export failed:', err);
+                    alert(`Export failed: ${err.message}`);
                   }
                 }}
-                disabled={!window.speechSynthesis}
+                disabled={isTraining || !trainedModel}
+                style={{ marginLeft: '10px' }}
               >
-                {voiceFeedbackEnabled ? '🔊 ON' : '🔇 OFF'}
+                📤 Export Model
               </button>
-              {!window.speechSynthesis && (
-                <span className="feature-unavailable">Not supported</span>
+
+              <button 
+                className="import-model-button"
+                onClick={() => {
+                  if (importInputRef.current) importInputRef.current.click();
+                }}
+                disabled={isTraining}
+                style={{ marginLeft: '10px' }}
+              >
+                📥 Import Model
+              </button>
+              <input 
+                type="file"
+                ref={importInputRef}
+                accept=".json,.bin"
+                multiple
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  try {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    // Expect model.json and weight files
+                    const handler = tf.io.browserFiles(files);
+                    const model = await tf.loadLayersModel(handler);
+                    // Attempt to reuse metadata from localStorage, else fallback
+                    const units = model.outputs && model.outputs[0] && model.outputs[0].shape ? model.outputs[0].shape[1] : DEFAULT_LABELS.length;
+                    const metadataString = localStorage.getItem('gesture-model-metadata');
+                    let metadata = null;
+                    if (metadataString) {
+                      metadata = JSON.parse(metadataString);
+                    } else {
+                      metadata = {
+                        indexToLabel: DEFAULT_LABELS.slice(0, units),
+                        labelToIndex: Object.fromEntries(DEFAULT_LABELS.slice(0, units).map((l, i) => [l, i])),
+                        numClasses: units,
+                        trainingStats: {},
+                        timestamp: new Date().toISOString(),
+                        version: '1.0.0'
+                      };
+                    }
+                    setTrainedModel(model);
+                    setModelMetadata(metadata);
+                    setIsInferenceActive(false);
+                    predictionWindowRef.current = [];
+                    console.log('✅ Imported model loaded');
+                    // Optional: persist imported model into IndexedDB for future sessions
+                    try {
+                      await model.save('indexeddb://gesture-model');
+                      localStorage.setItem('gesture-model-metadata', JSON.stringify(metadata));
+                      console.log('💾 Imported model persisted to IndexedDB');
+                    } catch (persistErr) {
+                      console.warn('⚠️ Could not persist imported model:', persistErr);
+                    }
+                  } catch (err) {
+                    console.error('❌ Import failed:', err);
+                    alert(`Import failed: ${err.message}`);
+                  } finally {
+                    if (e.target) e.target.value = '';
+                  }
+                }}
+              />
+            </div>
+            
+            <div className="inference-controls">
+              <button 
+                className={`inference-button ${isInferenceActive ? 'active' : ''}`}
+                onClick={isInferenceActive ? stopInference : startInference}
+                disabled={!trainedModel || isTraining}
+              >
+                {isInferenceActive ? '⏹️ Stop Inference' : '🚀 Start Inference'}
+              </button>
+              
+              {isInferenceActive && (
+                <div className="inference-status">
+                  🟢 Real-time inference active
+                </div>
               )}
             </div>
-          </div>
-        </div>
-        
-        <div className="training-controls">
-        <h3>Model Training</h3>
-        <p className="training-hint">
-          Train a gesture recognition model using your captured data
-        </p>
-        
-        {trainingProgress && (
-          <div className="training-progress">
-            {trainingProgress.phase === 'validating' && (
-              <div className="progress-item">
-                ⚙️ Validating dataset...
-              </div>
-            )}
             
-            {trainingProgress.phase === 'training' && (
-              <div className="progress-item">
-                🏋️ Training in progress...
-                {trainingProgress.epoch && (
-                  <div className="epoch-progress">
-                    Epoch {trainingProgress.epoch}/{trainingProgress.totalEpochs}
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {trainingProgress.epoch && trainingProgress.loss && (
-              <div className="training-stats">
-                <div className="stat">
-                  Loss: {trainingProgress.loss.toFixed(4)}
+            {modelMetadata && (
+              <div className="model-info">
+                <h4>Current Model Info</h4>
+                <div className="model-stats">
+                  <div>Classes: {modelMetadata.numClasses}</div>
+                  <div>Labels: {modelMetadata.indexToLabel.join(', ')}</div>
+                  <div>Trained: {new Date(modelMetadata.timestamp).toLocaleString()}</div>
+                  <div>Training Data: {Object.entries(modelMetadata.trainingStats)
+                    .filter(([key]) => key !== 'total' && key !== 'labels')
+                    .map(([label, count]) => `${label}: ${count}`)
+                    .join(', ')}</div>
                 </div>
-                <div className="stat">
-                  Accuracy: {((trainingProgress.accuracy || 0) * 100).toFixed(1)}%
-                </div>
-                {trainingProgress.valLoss && (
-                  <div className="stat">
-                    Val Loss: {trainingProgress.valLoss.toFixed(4)}
-                  </div>
-                )}
-                {trainingProgress.valAccuracy && (
-                  <div className="stat">
-                    Val Accuracy: {(trainingProgress.valAccuracy * 100).toFixed(1)}%
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {trainingProgress.phase === 'saving' && (
-              <div className="progress-item">
-                💾 Saving model to IndexedDB...
-              </div>
-            )}
-            
-            {trainingProgress.phase === 'completed' && (
-              <div className="progress-item success">
-                ✅ Training completed successfully!
-              </div>
-            )}
-            
-            {trainingProgress.phase === 'error' && (
-              <div className="progress-item error">
-                ❌ Training failed: {trainingProgress.error}
               </div>
             )}
           </div>
-        )}
-        
-        <div className="training-controls">
-          <button 
-            className="train-button"
-            onClick={handleTrainModel}
-            disabled={isTraining || Object.values(datasetCounts).every(count => count === 0)}
-          >
-            {isTraining ? '⚙️ Training...' : '🏋️ Train Model'}
-          </button>
-          
-          <button 
-            className="load-button"
-            onClick={handleLoadModel}
-            disabled={isTraining}
-          >
-            📥 Load Model
-          </button>
-          
-          <button 
-            className="test-button"
-            onClick={handleTestModel}
-            disabled={!trainedModel || isTraining}
-          >
-            🧪 Test Model
-          </button>
-          
-          <button 
-            className="delete-button"
-            onClick={handleDeleteModel}
-            disabled={!trainedModel || isTraining}
-          >
-            🗑️ Delete Model
-          </button>
 
-          <button 
-            className="export-model-button"
-            onClick={async () => {
-              try {
-                if (!trainedModel) {
-                  alert('Train or load a model first.');
-                  return;
-                }
-                await trainedModel.save('downloads://gesture-model');
-                console.log('💾 Model exported via browser download');
-              } catch (err) {
-                console.error('❌ Export failed:', err);
-                alert(`Export failed: ${err.message}`);
-              }
-            }}
-            disabled={isTraining || !trainedModel}
-            style={{ marginLeft: '10px' }}
-          >
-            📤 Export Model
-          </button>
-
-          <button 
-            className="import-model-button"
-            onClick={() => {
-              if (importInputRef.current) importInputRef.current.click();
-            }}
-            disabled={isTraining}
-            style={{ marginLeft: '10px' }}
-          >
-            📥 Import Model
-          </button>
-          <input 
-            type="file"
-            ref={importInputRef}
-            accept=".json,.bin"
-            multiple
-            style={{ display: 'none' }}
-            onChange={async (e) => {
-              try {
-                const files = Array.from(e.target.files || []);
-                if (files.length === 0) return;
-                // Expect model.json and weight files
-                const handler = tf.io.browserFiles(files);
-                const model = await tf.loadLayersModel(handler);
-                // Attempt to reuse metadata from localStorage, else fallback
-                const units = model.outputs && model.outputs[0] && model.outputs[0].shape ? model.outputs[0].shape[1] : DEFAULT_LABELS.length;
-                const metadataString = localStorage.getItem('gesture-model-metadata');
-                let metadata = null;
-                if (metadataString) {
-                  metadata = JSON.parse(metadataString);
-                } else {
-                  metadata = {
-                    indexToLabel: DEFAULT_LABELS.slice(0, units),
-                    labelToIndex: Object.fromEntries(DEFAULT_LABELS.slice(0, units).map((l, i) => [l, i])),
-                    numClasses: units,
-                    trainingStats: {},
-                    timestamp: new Date().toISOString(),
-                    version: '1.0.0'
-                  };
-                }
-                setTrainedModel(model);
-                setModelMetadata(metadata);
-                setIsInferenceActive(false);
-                predictionWindowRef.current = [];
-                console.log('✅ Imported model loaded');
-                // Optional: persist imported model into IndexedDB for future sessions
-                try {
-                  await model.save('indexeddb://gesture-model');
-                  localStorage.setItem('gesture-model-metadata', JSON.stringify(metadata));
-                  console.log('💾 Imported model persisted to IndexedDB');
-                } catch (persistErr) {
-                  console.warn('⚠️ Could not persist imported model:', persistErr);
-                }
-              } catch (err) {
-                console.error('❌ Import failed:', err);
-                alert(`Import failed: ${err.message}`);
-              } finally {
-                if (e.target) e.target.value = '';
-              }
-            }}
-          />
-        </div>
-        
-        <div className="inference-controls">
-          <button 
-            className={`inference-button ${isInferenceActive ? 'active' : ''}`}
-            onClick={isInferenceActive ? stopInference : startInference}
-            disabled={!trainedModel || isTraining}
-          >
-            {isInferenceActive ? '⏹️ Stop Inference' : '🚀 Start Inference'}
-          </button>
-          
-          {isInferenceActive && (
-            <div className="inference-status">
-              🟢 Real-time inference active
-            </div>
+          {showMappingEditor && (
+            <MappingEditor 
+              labels={modelMetadata ? modelMetadata.indexToLabel : []}
+              onMappingsChange={handleMappingsChange}
+              userId={userId}
+            />
           )}
-        </div>
-        
-        {modelMetadata && (
-          <div className="model-info">
-            <h4>Current Model Info</h4>
-            <div className="model-stats">
-              <div>Classes: {modelMetadata.numClasses}</div>
-              <div>Labels: {modelMetadata.indexToLabel.join(', ')}</div>
-              <div>Trained: {new Date(modelMetadata.timestamp).toLocaleString()}</div>
-              <div>Training Data: {Object.entries(modelMetadata.trainingStats)
-                .filter(([key]) => key !== 'total' && key !== 'labels')
-                .map(([label, count]) => `${label}: ${count}`)
-                .join(', ')}</div>
-            </div>
+
+          <div className="info">
+            <p>Show your hands to the camera to see landmark detection in action!</p>
+            <p>Blue dots will appear on detected hand landmarks (21 points per hand).</p>
+            <p>Red dot shows the centroid of your hand.</p>
           </div>
-        )}
-      </div>
-
-<MappingEditor 
-        labels={modelMetadata ? modelMetadata.indexToLabel : []}
-        onMappingsChange={handleMappingsChange}
-        userId={userId}
-      />
-
-      <div className="info">
-        <p>Show your hands to the camera to see landmark detection in action!</p>
-        <p>Blue dots will appear on detected hand landmarks (21 points per hand).</p>
-        <p>Red dot shows the centroid of your hand.</p>
-      </div>
+        </>
+      )}
     </div>
   );
 };
