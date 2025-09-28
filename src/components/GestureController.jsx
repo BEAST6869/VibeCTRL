@@ -60,6 +60,7 @@ const GestureController = ({ mode = 'full', onRegisterControls = null, onStatusC
   const [currentPrediction, setCurrentPrediction] = useState(null);
   const [lastTriggeredAction, setLastTriggeredAction] = useState(null);
 const [gestureMappings, setGestureMappings] = useState({});
+const [hudFeedback, setHudFeedback] = useState(null);
   const [userId, setUserId] = useState(null);
   const [swipeAnimation, setSwipeAnimation] = useState(null);
   
@@ -540,6 +541,19 @@ const triggerAction = (actionLabel, confidence) => {
 
     // Show initial gesture animation immediately (optimistic)
     showGestureAnimation(true, actionLabel);
+    
+    // Show HUD feedback
+    const actionIcons = {
+      'toggle_video': '🎬',
+      'scroll_up': '⬆️',
+      'scroll_down': '⬇️',
+      'volume_up': '🔊',
+      'volume_down': '🔉',
+      'key_press': '⌨️',
+      'click_selector': '👆'
+    };
+    const icon = actionIcons[mapping?.action] || '✋';
+    showHudFeedback(icon, `${actionLabel} → ${mapping?.action || 'action'}`);
 
     // Clear action indicator after 2 seconds
     setTimeout(() => {
@@ -670,6 +684,14 @@ const triggerAction = (actionLabel, confidence) => {
     } catch (error) {
       console.warn('⚠️ Voice feedback error:', error);
     }
+  };
+
+  // HUD feedback function
+  const showHudFeedback = (icon, message, duration = 2000) => {
+    setHudFeedback({ icon, message, timestamp: Date.now() });
+    setTimeout(() => {
+      setHudFeedback(null);
+    }, duration);
   };
   
   // Calibration functions
@@ -887,6 +909,19 @@ const triggerAction = (actionLabel, confidence) => {
             if (ok) {
               lastFiredLabelRef.current = majorityLabel;
               hasResetSinceLastFireRef.current = false;
+              
+              // Broadcast gesture to extension for external sites
+              try {
+                if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+                  chrome.runtime.sendMessage({
+                    type: 'VIBE_GESTURE_DETECTED',
+                    gesture: majorityLabel,
+                    confidence: maxProbability
+                  });
+                }
+              } catch (extError) {
+                // Extension not available, ignore
+              }
             }
           } else {
             console.log(`🧯 Hold suppression: ${majorityLabel} not re-fired until release`);
@@ -1246,6 +1281,30 @@ useEffect(() => {
         {showOverlays && lastTriggeredAction && (
           <div className="action-indicator">
             ⚡ {lastTriggeredAction.label} → {lastTriggeredAction.action || '...'} @ {new Date(lastTriggeredAction.timestamp).toLocaleTimeString()}
+          </div>
+        )}
+        {showOverlays && hudFeedback && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(0,0,0,0.9)',
+            color: 'white',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            fontSize: '18px',
+            fontWeight: 'bold',
+            zIndex: 2000,
+            pointerEvents: 'none',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            border: '2px solid #10b981',
+            animation: 'fadeInOut 2s ease-in-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '24px' }}>{hudFeedback.icon}</span>
+              <span>{hudFeedback.message}</span>
+            </div>
           </div>
         )}
         {showOverlays && swipeAnimation && (

@@ -35,6 +35,26 @@
 
 /* Enhanced UI Polish Styles */
 
+/* HUD Feedback animation */
+@keyframes fadeInOut {
+  0% { 
+    opacity: 0; 
+    transform: translate(-50%, -50%) scale(0.8); 
+  }
+  20% { 
+    opacity: 1; 
+    transform: translate(-50%, -50%) scale(1.05); 
+  }
+  80% { 
+    opacity: 1; 
+    transform: translate(-50%, -50%) scale(1); 
+  }
+  100% { 
+    opacity: 0; 
+    transform: translate(-50%, -50%) scale(0.9); 
+  }
+}
+
 /* Video Overlay Elements */
 .confidence-meter {
   position: absolute;

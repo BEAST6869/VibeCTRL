@@ -12,7 +12,9 @@
     "storage",
     "tabs",
     "scripting",
-    "offscreen"
+    "offscreen",
+    "camera",
+    "microphone"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -40,7 +42,9 @@
     {
       "resources": [
         "static/*",
-        "assets/*"
+        "assets/*",
+        "adapters/*",
+        "offscreen.html"
       ],
       "matches": ["<all_urls>"]
     }

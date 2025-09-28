@@ -80,6 +80,50 @@ chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === 'VIBE_INJECT_PAGE_OVERLAY') {
+    try {
+      const tabId = msg.tabId || sender?.tab?.id;
+      if (!tabId) {
+        sendResponse({ ok: false, error: 'No tab ID provided' });
+        return true;
+      }
+
+      // Inject the page-context camera system
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['page-injector.js']
+      });
+
+      sendResponse({ ok: true });
+    } catch (e) {
+      console.error('❌ Failed to inject page overlay:', e);
+      sendResponse({ ok: false, error: e?.message || String(e) });
+    }
+    return true;
+  }
+
+  if (msg.type === 'VIBE_GESTURE_DETECTED') {
+    try {
+      // Broadcast gesture to all tabs (not just active ones)
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            type: 'VIBE_GESTURE_DETECTED',
+            gesture: msg.gesture,
+            confidence: msg.confidence
+          });
+        } catch (e) {
+          // Tab might not have content script, ignore
+        }
+      }
+      sendResponse({ ok: true });
+    } catch (e) {
+      sendResponse({ ok: false, error: e?.message || String(e) });
+    }
+    return true;
+  }
+
   if (msg.type === 'VIBE_TOGGLE_OVERLAY') {
     try {
       const current = (await chrome.storage.local.get('vibe_overlay_enabled')).vibe_overlay_enabled;

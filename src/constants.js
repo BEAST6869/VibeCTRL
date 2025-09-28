@@ -19,11 +19,11 @@ export const MAX_RECORDING_TIME_MS = 5000; // Maximum recording time hint
 
 // Real-time inference constants
 export const INFERENCE_CONFIG = {
-  SMOOTHING_WINDOW: 8, // Number of predictions to keep in buffer
-  CONFIDENCE_THRESHOLD: 0.7, // Minimum confidence for action trigger
-  COOLDOWN_MS: 700, // Milliseconds between actions
-  INFERENCE_INTERVAL_MS: 100, // Milliseconds between predictions
-  MIN_MAJORITY_COUNT: 5 // Minimum votes needed in window for majority
+  SMOOTHING_WINDOW: 5, // Number of predictions to keep in buffer (reduced for faster response)
+  CONFIDENCE_THRESHOLD: 0.6, // Minimum confidence for action trigger (lowered for faster detection)
+  COOLDOWN_MS: 400, // Milliseconds between actions (reduced for more responsive)
+  INFERENCE_INTERVAL_MS: 50, // Milliseconds between predictions (doubled frequency)
+  MIN_MAJORITY_COUNT: 3 // Minimum votes needed in window for majority (reduced for faster response)
 };
 
 // Swipe detection constants

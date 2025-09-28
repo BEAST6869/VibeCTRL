@@ -1,12 +1,15 @@
-// Content script: executes mapped actions on the current page.
-// For MVP, this script focuses on executing actions relayed from the popup/background.
-// Optionally, it can be extended to run detection directly in-page.
+// Enhanced content script: executes mapped actions on the current page
+// with gesture detection integration and site-specific adapters
 
 (function () {
-  // Inject overlay iframe for in-page detection if enabled
-  const OVERLAY_ID = '__vibectrl_overlay__';
-  const OVERLAY_STYLE_ID = '__vibectrl_overlay_style__';
+  // Global gesture mappings and adapters
+  let globalMappings = {};
+  let currentAdapter = null;
+  let isYouTube = false;
+  let pageVideo = null;
+  let gestureDetectionActive = false;
 
+  // Check if overlay is enabled
   async function isOverlayEnabled() {
     return new Promise((resolve) => {
       try {
@@ -19,81 +22,37 @@
     });
   }
 
-  function injectStyle() {
-    if (document.getElementById(OVERLAY_STYLE_ID)) return;
-    const style = document.createElement('style');
-    style.id = OVERLAY_STYLE_ID;
-    style.textContent = `
-      #${OVERLAY_ID} { position: fixed; right: 14px; bottom: 14px; width: 360px; height: 270px; z-index: 2147483647; pointer-events: none; }
-      #${OVERLAY_ID} .vc-wrap { pointer-events: auto; box-shadow: 6px 6px 0 rgba(0,0,0,0.35); border: 4px solid #000; border-radius: 10px; background: #fff; overflow: hidden; }
-      #${OVERLAY_ID} .vc-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; background: #f8f8f8; border-bottom: 4px solid #000; cursor: move; }
-      #${OVERLAY_ID} .vc-iframe { width: 100%; height: calc(100% - 40px); border: 0; }
-      #${OVERLAY_ID}.dragging { opacity: 0.9; }
-      #${OVERLAY_ID} .vc-btn { border: 3px solid #000; background: #fff; padding: 4px 8px; border-radius: 8px; cursor: pointer; font-weight: 800; }
-    `;
-    document.documentElement.appendChild(style);
+  // Inject page-context overlay
+  async function injectPageOverlay() {
+    try {
+      console.log('🎬 VibeCTRL: Injecting page-context overlay');
+      
+      // Request background script to inject the page-context camera system
+      const response = await chrome.runtime.sendMessage({
+        type: 'VIBE_INJECT_PAGE_OVERLAY',
+        tabId: null // Will use current tab
+      });
+      
+      if (response && response.ok) {
+        console.log('✅ VibeCTRL: Page overlay injected successfully');
+      } else {
+        console.error('❌ VibeCTRL: Failed to inject page overlay:', response?.error);
+      }
+    } catch (error) {
+      console.error('❌ VibeCTRL: Error injecting page overlay:', error);
+    }
   }
 
-  function createOverlay() {
-    if (document.getElementById(OVERLAY_ID)) return;
-    injectStyle();
-    const root = document.createElement('div');
-    root.id = OVERLAY_ID;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'vc-wrap';
-
-    const header = document.createElement('div');
-    header.className = 'vc-header';
-    const title = document.createElement('div');
-    title.textContent = 'VibeCTRL';
-    const btns = document.createElement('div');
-
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'vc-btn';
-    closeBtn.textContent = '✕';
-    closeBtn.title = 'Hide overlay';
-    closeBtn.onclick = () => removeOverlay();
-
-    btns.appendChild(closeBtn);
-    header.appendChild(title);
-    header.appendChild(btns);
-
-    const iframe = document.createElement('iframe');
-    const url = chrome.runtime.getURL('offscreen.html#/overlay?embed=1');
-    iframe.src = url;
-    iframe.className = 'vc-iframe';
-    iframe.allow = 'camera; microphone;';
-
-    wrap.appendChild(header);
-    wrap.appendChild(iframe);
-    root.appendChild(wrap);
-    document.documentElement.appendChild(root);
-
-    // Drag support
-    let dragging = false; let sx=0; let sy=0; let rx=0; let ry=0;
-    const onDown = (e) => { dragging = true; sx = e.clientX; sy = e.clientY; const r = root.getBoundingClientRect(); rx=r.right; ry=r.bottom; root.classList.add('dragging'); };
-    const onMove = (e) => { if (!dragging) return; const dx = e.clientX - sx; const dy = e.clientY - sy; root.style.right = (window.innerWidth - rx - dx) + 'px'; root.style.bottom = (window.innerHeight - ry - dy) + 'px'; };
-    const onUp = () => { dragging = false; root.classList.remove('dragging'); };
-    header.addEventListener('pointerdown', onDown);
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+  // Remove page overlay
+  function removePageOverlay() {
+    try {
+      // Dispatch close event to page context
+      window.dispatchEvent(new Event('VIBECTRL_CLOSE_OVERLAY'));
+      console.log('🎬 VibeCTRL: Page overlay removed');
+    } catch (error) {
+      console.error('❌ VibeCTRL: Error removing page overlay:', error);
+    }
   }
-
-  function removeOverlay() {
-    const el = document.getElementById(OVERLAY_ID);
-    if (el && el.parentNode) el.parentNode.removeChild(el);
-  }
-
-  // Respond to background toggle
-  chrome.runtime.onMessage.addListener((msg) => {
-    if (!msg || typeof msg !== 'object') return;
-    if (msg.type === 'VIBE_INJECT_OVERLAY') createOverlay();
-    if (msg.type === 'VIBE_REMOVE_OVERLAY') removeOverlay();
-  });
-
-  // Auto-inject if enabled
-  isOverlayEnabled().then((on) => { if (on) createOverlay(); });
 
   // Small helpers
   const coalesceNumber = (...values) => {
@@ -232,14 +191,316 @@
     noop: () => true
   };
 
+  // Global gesture mappings and adapters
+  let globalMappings = {};
+  let currentAdapter = null;
+  let isYouTube = false;
+
+  // Initialize adapters based on current site
+  async function initializeAdapter() {
+    try {
+      const hostname = window.location.hostname.toLowerCase();
+      isYouTube = hostname.includes('youtube.com') || hostname.includes('youtu.be');
+      
+      if (isYouTube) {
+        // Load YouTube adapter
+        const script = document.createElement('script');
+        script.src = chrome.runtime.getURL('adapters/youtube.js');
+        script.onload = async () => {
+          if (window.YouTubeAdapter) {
+            currentAdapter = new window.YouTubeAdapter();
+            await currentAdapter.init();
+            console.log('🎬 YouTube adapter loaded');
+          }
+        };
+        document.head.appendChild(script);
+      } else {
+        // Load generic adapter
+        const script = document.createElement('script');
+        script.src = chrome.runtime.getURL('adapters/generic.js');
+        script.onload = async () => {
+          if (window.GenericAdapter) {
+            currentAdapter = new window.GenericAdapter();
+            await currentAdapter.init();
+            console.log('🎬 Generic adapter loaded');
+          }
+        };
+        document.head.appendChild(script);
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to initialize adapter:', error);
+    }
+  }
+
+  // Load global gesture mappings
+  async function loadGlobalMappings() {
+    try {
+      const result = await chrome.storage.sync.get(['gesture_mappings']);
+      if (result.gesture_mappings) {
+        globalMappings = result.gesture_mappings;
+        console.log('🌐 Global gesture mappings loaded');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load global mappings:', error);
+    }
+  }
+
+  // Execute action using site-specific adapter
+  async function executeAction(actionName, params = {}) {
+    try {
+      // Try site-specific adapter first
+      if (currentAdapter && typeof currentAdapter.executeAction === 'function') {
+        const result = await currentAdapter.executeAction(actionName, params);
+        if (result) return true;
+      }
+
+      // Fallback to generic actions
+      const fn = ACTIONS[actionName];
+      if (typeof fn === 'function') {
+        return await fn(params || {});
+      }
+
+      return false;
+    } catch (error) {
+      console.warn('⚠️ Action execution failed:', error);
+      return false;
+    }
+  }
+
+  // Handle gesture detection with mapping execution
+  function handleGestureDetected(gesture, confidence) {
+    try {
+      if (!globalMappings || !globalMappings[gesture]) {
+        return;
+      }
+
+      const mapping = globalMappings[gesture];
+      const confidenceThreshold = 0.6; // Match the improved threshold
+      
+      if (confidence >= confidenceThreshold) {
+        console.log(`🎯 Executing ${gesture} -> ${mapping.action} (${(confidence * 100).toFixed(1)}%)`);
+        executeAction(mapping.action, mapping.params || {});
+      }
+    } catch (error) {
+      console.warn('⚠️ Gesture handling failed:', error);
+    }
+  }
+
+  // Listen for page-context messages
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    
+    const data = event.data;
+    if (data?.source === 'VIBECTRL_OVERLAY') {
+      if (data.status === 'bootstrapped') {
+        console.log('✅ VibeCTRL: Page overlay bootstrapped');
+      } else if (data.status === 'closed') {
+        console.log('🎬 VibeCTRL: Page overlay closed');
+        gestureDetectionActive = false;
+      }
+    }
+    
+    if (data?.source === 'VIBECTRL_CAMERA') {
+      if (data.status === 'ready') {
+        console.log('✅ VibeCTRL: Camera ready, starting gesture detection');
+        pageVideo = document.getElementById('vibectrl_page_video');
+        if (pageVideo) {
+          startGestureDetection();
+        }
+      } else if (data.status === 'stopped') {
+        console.log('🎬 VibeCTRL: Camera stopped');
+        gestureDetectionActive = false;
+      } else if (data.status === 'error') {
+        console.error('❌ VibeCTRL: Camera error:', data.message);
+        gestureDetectionActive = false;
+      }
+    }
+  });
+
+  // Start gesture detection using page video
+  async function startGestureDetection() {
+    if (!pageVideo || gestureDetectionActive) return;
+    
+    try {
+      gestureDetectionActive = true;
+      console.log('🎯 VibeCTRL: Starting gesture detection on page video');
+      
+      // Load TensorFlow.js and handpose model
+      await loadGestureModel();
+      
+      // Start detection loop
+      runDetectionLoop();
+      
+    } catch (error) {
+      console.error('❌ VibeCTRL: Failed to start gesture detection:', error);
+      gestureDetectionActive = false;
+    }
+  }
+
+  // Load gesture detection model
+  async function loadGestureModel() {
+    try {
+      // Load TensorFlow.js
+      if (!window.tf) {
+        const tfScript = document.createElement('script');
+        tfScript.src = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js';
+        await new Promise((resolve, reject) => {
+          tfScript.onload = resolve;
+          tfScript.onerror = reject;
+          document.head.appendChild(tfScript);
+        });
+      }
+      
+      // Load handpose model
+      if (!window.handpose) {
+        const handposeScript = document.createElement('script');
+        handposeScript.src = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@latest/dist/handpose.min.js';
+        await new Promise((resolve, reject) => {
+          handposeScript.onload = resolve;
+          handposeScript.onerror = reject;
+          document.head.appendChild(handposeScript);
+        });
+      }
+      
+      // Initialize handpose model
+      if (window.handpose && !window.handposeModel) {
+        window.handposeModel = await handpose.load();
+        console.log('✅ VibeCTRL: Handpose model loaded');
+      }
+      
+    } catch (error) {
+      console.error('❌ VibeCTRL: Failed to load gesture model:', error);
+      throw error;
+    }
+  }
+
+  // Run gesture detection loop
+  async function runDetectionLoop() {
+    if (!gestureDetectionActive || !pageVideo || !window.handposeModel) return;
+    
+    try {
+      // Get hand predictions
+      const hands = await window.handposeModel.estimateHands(pageVideo, false);
+      
+      if (hands.length > 0) {
+        // Process gesture detection
+        const landmarks = hands[0].landmarks;
+        if (landmarks && landmarks.length >= 21) {
+          // Simple gesture classification based on hand landmarks
+          const gesture = classifyGesture(landmarks);
+          if (gesture) {
+            console.log(`🎯 VibeCTRL: Detected gesture: ${gesture}`);
+            handleGestureDetected(gesture, 0.8); // Fixed confidence for now
+          }
+        }
+      }
+      
+      // Update gesture status in overlay
+      updateGestureStatus(hands.length > 0 ? 'Hand detected' : 'No hand detected');
+      
+    } catch (error) {
+      console.error('❌ VibeCTRL: Detection loop error:', error);
+    }
+    
+    // Continue loop
+    if (gestureDetectionActive) {
+      requestAnimationFrame(runDetectionLoop);
+    }
+  }
+
+  // Simple gesture classification
+  function classifyGesture(landmarks) {
+    // This is a simplified gesture classifier
+    // In a real implementation, you'd use a trained model
+    
+    const thumb = landmarks[4];
+    const index = landmarks[8];
+    const middle = landmarks[12];
+    const ring = landmarks[16];
+    const pinky = landmarks[20];
+    const wrist = landmarks[0];
+    
+    // Check if fingers are extended
+    const thumbExtended = thumb[1] < landmarks[3][1];
+    const indexExtended = index[1] < landmarks[6][1];
+    const middleExtended = middle[1] < landmarks[10][1];
+    const ringExtended = ring[1] < landmarks[14][1];
+    const pinkyExtended = pinky[1] < landmarks[18][1];
+    
+    const extendedFingers = [thumbExtended, indexExtended, middleExtended, ringExtended, pinkyExtended];
+    const extendedCount = extendedFingers.filter(Boolean).length;
+    
+    // Simple gesture classification
+    if (extendedCount === 0) {
+      return 'fist';
+    } else if (extendedCount === 5) {
+      return 'open_hand';
+    } else if (extendedCount === 2 && indexExtended && middleExtended) {
+      return 'peace';
+    } else if (extendedCount === 1 && thumbExtended) {
+      return 'thumbs_up';
+    }
+    
+    return null;
+  }
+
+  // Update gesture status in overlay
+  function updateGestureStatus(status) {
+    try {
+      const statusDiv = document.getElementById('vibectrl-gesture-status');
+      if (statusDiv) {
+        statusDiv.textContent = status;
+      }
+    } catch (error) {
+      // Ignore errors updating status
+    }
+  }
+
+  // Initialize on page load
+  async function initialize() {
+    await loadGlobalMappings();
+    await initializeAdapter();
+  }
+
+  // Listen for mapping updates
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'sync' && changes.gesture_mappings) {
+      globalMappings = changes.gesture_mappings.newValue || {};
+      console.log('🔄 Gesture mappings updated');
+    }
+  });
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || typeof msg !== 'object') return;
+    
     if (msg.type === 'VIBE_EXECUTE') {
       const { action, params } = msg;
-      const fn = ACTIONS[action];
-      const ok = typeof fn === 'function' ? !!fn(params || {}) : false;
-      sendResponse({ ok });
+      executeAction(action, params || {}).then(ok => {
+        sendResponse({ ok });
+      });
+      return true;
+    }
+    
+    if (msg.type === 'VIBE_GESTURE_DETECTED') {
+      const { gesture, confidence } = msg;
+      handleGestureDetected(gesture, confidence);
+      sendResponse({ ok: true });
+      return true;
+    }
+    
+    if (msg.type === 'VIBE_INJECT_OVERLAY') {
+      injectPageOverlay();
+      sendResponse({ ok: true });
+      return true;
+    }
+    
+    if (msg.type === 'VIBE_REMOVE_OVERLAY') {
+      removePageOverlay();
+      sendResponse({ ok: true });
       return true;
     }
   });
+
+  // Initialize on page load
+  initialize();
 })();
